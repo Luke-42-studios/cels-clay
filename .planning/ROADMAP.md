@@ -58,13 +58,13 @@ Plans:
 **Requirements**: CORE-02, PIPE-01, PIPE-02, PIPE-04
 **Success Criteria** (what must be TRUE):
   1. ClayRenderable Feature is defined and a Provider callback receives the Clay_RenderCommandArray each frame
-  2. Render dispatch runs at OnRender phase (after layout is complete) and backends can iterate all render commands
+  2. Render dispatch runs at OnStore phase (after layout is complete) and backends can iterate all render commands
   3. CEL_DefineModule(Clay_Engine) bundles layout + render systems and Clay_Engine_use() initializes the full module in one call
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 03-01: ClayRenderable Feature, Provider callback, render dispatch at OnRender
-- [ ] 03-02: Module facade (CEL_DefineModule) bundling layout + render systems
+- [ ] 03-01-PLAN.md -- Render bridge: ClayRenderable Feature, ClayRenderableData component, singleton entity, dispatch system at OnStore (wave 1)
+- [ ] 03-02-PLAN.md -- Module facade: pointer-based config API, composable sub-modules, CMake integration (wave 2)
 
 ### Phase 4: ncurses Clay Renderer
 **Goal**: Clay render commands produce visible terminal output -- rectangles, text, borders, and colors rendered correctly in ncurses
@@ -113,4 +113,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 
 ---
 *Roadmap created: 2026-02-07*
-*Last updated: 2026-02-08 after Phase 2 execution*
+*Last updated: 2026-02-08 after Phase 3 planning*
