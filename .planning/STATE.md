@@ -5,33 +5,33 @@
 See: .planning/PROJECT.md (updated 2026-02-07)
 
 **Core value:** Declarative UI development where CELS handles application state and reactivity while Clay handles layout
-**Current focus:** Phase 1 - Build System + Clay Initialization
+**Current focus:** Phase 1 complete. Next: Phase 2 - Layout System Core
 
 ## Current Position
 
-Phase: 1 of 5 (Build System + Clay Initialization)
-Plan: 1 of 2 in current phase
-Status: In progress
-Last activity: 2026-02-08 -- Completed 01-01-PLAN.md
+Phase: 1 of 5 (Build System + Clay Initialization) -- COMPLETE
+Plan: 2 of 2 in current phase
+Status: Phase complete
+Last activity: 2026-02-08 -- Completed 01-02-PLAN.md
 
-Progress: [=.........] 8%
+Progress: [==........] 17%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 1
+- Total plans completed: 2
 - Average duration: 2 min
-- Total execution time: 2 min
+- Total execution time: 4 min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 1 | 1 | 2 min | 2 min |
+| 1 | 2 | 4 min | 2 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (2 min)
-- Trend: Starting
+- Last 5 plans: 01-01 (2 min), 01-02 (2 min)
+- Trend: Consistent
 
 *Updated after each plan completion*
 
@@ -49,10 +49,13 @@ Recent decisions affecting current work:
 - [API]: Dynamic strings need per-frame arena (CLAY_DYN_STRING) — API-07 requirement
 - [01-01]: FetchContent_Populate over MakeAvailable (Clay CMakeLists.txt builds examples)
 - [01-01]: clay_engine.h does NOT include clay.h — consumers include clay.h separately for CLAY() macros
+- [01-02]: Arena size defaults to Clay_MinMemorySize() — no multiplier, consumer overrides via config
+- [01-02]: Store Clay_Context* for future multi-context support, unused in Phase 1
+- [01-02]: Free g_clay_arena_memory (original malloc ptr), NOT arena.memory (cache-line aligned offset)
 
 ### Pending Todos
 
-None yet.
+None.
 
 ### Blockers/Concerns
 
@@ -61,6 +64,6 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-08
-Stopped at: Completed 01-01-PLAN.md (CMake + headers). Next: 01-02 (Clay init, arena, error handler)
+Stopped at: Completed 01-02-PLAN.md (Clay init, arena, error handler, CELS root integration). Phase 1 complete.
 Resume file: None
 Key reference: .planning/API-DESIGN.md
