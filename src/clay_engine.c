@@ -15,6 +15,7 @@
  */
 
 #include "cels-clay/clay_engine.h"
+#include "cels-clay/clay_layout.h"
 #include "clay.h"
 
 #include <stdlib.h>
@@ -58,8 +59,6 @@ static void clay_error_handler(Clay_ErrorData error) {
             type_str = "percentage over 1"; break;
         case CLAY_ERROR_TYPE_INTERNAL_ERROR:
             type_str = "internal error"; break;
-        case CLAY_ERROR_TYPE_UNBALANCED_OPEN_CLOSE:
-            type_str = "unbalanced open/close"; break;
     }
     /* Clay_String is NOT null-terminated -- use %.*s with explicit length */
     fprintf(stderr, "[cels-clay] %s: %.*s\n",
@@ -71,6 +70,7 @@ static void clay_error_handler(Clay_ErrorData error) {
  * ============================================================================ */
 
 static void clay_cleanup(void) {
+    _cel_clay_layout_cleanup();  /* Free frame arena (before Clay arena) */
     if (g_clay_arena_memory != NULL) {
         free(g_clay_arena_memory);
         g_clay_arena_memory = NULL;
@@ -109,7 +109,13 @@ _CEL_DefineModule(Clay_Engine) {
         (Clay_ErrorHandler){ .errorHandlerFunction = clay_error_handler }
     );
 
-    /* 4. Register cleanup for process exit */
+    /* 4. Initialize layout subsystem (frame arena, text measurement, components) */
+    _cel_clay_layout_init();
+
+    /* 5. Register layout system at PreStore phase */
+    _cel_clay_layout_system_register();
+
+    /* 6. Register cleanup for process exit */
     atexit(clay_cleanup);
 }
 
