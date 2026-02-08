@@ -7,16 +7,16 @@
 
 ### Build & Integration
 
-- [ ] **BUILD-01**: Clay library fetched via CMake FetchContent (Populate pattern, not MakeAvailable)
-- [ ] **BUILD-02**: cels-clay is a CMake INTERFACE library matching cels-ncurses pattern
-- [ ] **BUILD-03**: CLAY_IMPLEMENTATION defined in exactly one module .c file
-- [ ] **BUILD-04**: Clay include path available to consumers via target_include_directories
+- [x] **BUILD-01**: Clay library fetched via CMake FetchContent (Populate pattern, not MakeAvailable)
+- [x] **BUILD-02**: cels-clay is a CMake INTERFACE library matching cels-ncurses pattern
+- [x] **BUILD-03**: CLAY_IMPLEMENTATION defined in exactly one module .c file
+- [x] **BUILD-04**: Clay include path available to consumers via target_include_directories
 
 ### Module Core
 
-- [ ] **CORE-01**: Clay arena initialized and managed through CELS lifecycle system
+- [x] **CORE-01**: Clay arena initialized and managed through CELS lifecycle system
 - [ ] **CORE-02**: CEL_DefineModule(Clay_Engine) facade bundles layout + render systems
-- [ ] **CORE-03**: Clay error handler wired to CELS logging (capacity exceeded, duplicate IDs surfaced visibly)
+- [x] **CORE-03**: Clay error handler wired to CELS logging (capacity exceeded, duplicate IDs surfaced visibly)
 - [ ] **CORE-04**: Terminal dimensions synced to Clay_SetLayoutDimensions each frame from window state
 
 ### Developer API
@@ -93,13 +93,13 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| BUILD-01 | Phase 1 | Pending |
-| BUILD-02 | Phase 1 | Pending |
-| BUILD-03 | Phase 1 | Pending |
-| BUILD-04 | Phase 1 | Pending |
-| CORE-01 | Phase 1 | Pending |
+| BUILD-01 | Phase 1 | Complete |
+| BUILD-02 | Phase 1 | Complete |
+| BUILD-03 | Phase 1 | Complete |
+| BUILD-04 | Phase 1 | Complete |
+| CORE-01 | Phase 1 | Complete |
 | CORE-02 | Phase 3 | Pending |
-| CORE-03 | Phase 1 | Pending |
+| CORE-03 | Phase 1 | Complete |
 | CORE-04 | Phase 2 | Pending |
 | API-01 | Phase 2 | Pending |
 | API-02 | Phase 2 | Pending |
@@ -134,4 +134,4 @@
 
 ---
 *Requirements defined: 2026-02-07*
-*Last updated: 2026-02-07 after roadmap creation*
+*Last updated: 2026-02-08 after Phase 1 completion*

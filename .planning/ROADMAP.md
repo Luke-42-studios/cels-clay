@@ -12,7 +12,7 @@ cels-clay integrates the Clay layout engine into the CELS declarative ECS framew
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Build System + Clay Initialization** - CMake integration, Clay fetch, arena setup, error handler
+- [x] **Phase 1: Build System + Clay Initialization** - CMake integration, Clay fetch, arena setup, error handler
 - [ ] **Phase 2: Layout System Core** - CEL_Clay() macro, entity tree walking, layout pipeline, developer API
 - [ ] **Phase 3: Render Bridge + Module Definition** - ClayRenderable Feature, Provider dispatch, module facade
 - [ ] **Phase 4: ncurses Clay Renderer** - Terminal render commands: rectangles, text, borders, clipping, color
@@ -33,7 +33,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 Plans:
 - [x] 01-01-PLAN.md -- CMake FetchContent + INTERFACE library setup (wave 1)
-- [ ] 01-02-PLAN.md -- Clay initialization, arena management, error handler wiring (wave 2)
+- [x] 01-02-PLAN.md -- Clay initialization, arena management, error handler wiring (wave 2)
 
 ### Phase 2: Layout System Core
 **Goal**: Developers can write CELS compositions that contribute CLAY() blocks to a single per-frame layout tree with correct nesting and ordering
@@ -105,7 +105,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Build System + Clay Initialization | 1/2 | In progress | - |
+| 1. Build System + Clay Initialization | 2/2 | ✓ Complete | 2026-02-08 |
 | 2. Layout System Core | 0/3 | Not started | - |
 | 3. Render Bridge + Module Definition | 0/2 | Not started | - |
 | 4. ncurses Clay Renderer | 0/3 | Not started | - |
@@ -113,4 +113,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 
 ---
 *Roadmap created: 2026-02-07*
-*Last updated: 2026-02-08*
+*Last updated: 2026-02-08 after Phase 1 completion*
