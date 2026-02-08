@@ -38,19 +38,19 @@ Plans:
 ### Phase 2: Layout System Core
 **Goal**: Developers can write CELS compositions that contribute CLAY() blocks to a single per-frame layout tree with correct nesting and ordering
 **Depends on**: Phase 1
-**Requirements**: CORE-04, API-01, API-02, API-03, API-04, API-05, API-06, API-07, API-08, PIPE-03, PIPE-05
+**Requirements**: CORE-04, API-01, API-02, API-03, API-04, API-05, API-07, API-08, PIPE-03, PIPE-05
 **Success Criteria** (what must be TRUE):
   1. A CEL_Clay() scope inside a composition opens an entity-backed CLAY() block and all standard Clay macros (CLAY_TEXT, CLAY_ID, sizing helpers) work inside it
   2. Parent-child entity relationships produce correctly nested CLAY() output in deterministic depth-first order
   3. The layout system runs at PreStore phase each frame, coordinating a single BeginLayout/EndLayout pass across all active compositions
   4. Terminal resize updates propagate to Clay_SetLayoutDimensions so layout adapts to window size changes
   5. Text measurement callback is registered and available for renderer backends to hook into
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 02-01: ClayUI component, CEL_Clay() macro, entity-backed scopes
-- [ ] 02-02: Layout system (PreStore), entity tree walking, BeginLayout/EndLayout coordination
-- [ ] 02-03: Developer helpers (cell-aware sizing, dynamic strings, auto Clay IDs, emit_children)
+- [ ] 02-01-PLAN.md -- Public header, types, frame arena, text measurement, auto-ID infrastructure (wave 1)
+- [ ] 02-02-PLAN.md -- Layout system (PreStore), entity tree walk, BeginLayout/EndLayout, module wiring (wave 2)
+- [ ] 02-03-PLAN.md -- ClaySurface composition, compile validation, phase success criteria verification (wave 3)
 
 ### Phase 3: Render Bridge + Module Definition
 **Goal**: Layout results are exposed to renderer backends through the CELS Feature/Provider pattern, and the module has a clean single-call initialization
@@ -105,12 +105,12 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Build System + Clay Initialization | 2/2 | ✓ Complete | 2026-02-08 |
-| 2. Layout System Core | 0/3 | Not started | - |
+| 1. Build System + Clay Initialization | 2/2 | Complete | 2026-02-08 |
+| 2. Layout System Core | 0/3 | Planned | - |
 | 3. Render Bridge + Module Definition | 0/2 | Not started | - |
 | 4. ncurses Clay Renderer | 0/3 | Not started | - |
 | 5. Demo App + Integration | 0/2 | Not started | - |
 
 ---
 *Roadmap created: 2026-02-07*
-*Last updated: 2026-02-08 after Phase 1 completion*
+*Last updated: 2026-02-08 after Phase 2 planning*
