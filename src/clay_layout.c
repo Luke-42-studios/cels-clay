@@ -180,6 +180,9 @@ static void clay_walk_children(ecs_world_t* world, ecs_entity_t parent);
 
 Clay_ElementId _cel_clay_auto_id(uint32_t counter) {
     uint32_t seed = (uint32_t)g_layout_current_entity;
+    /* Scramble entity ID with golden ratio hash to avoid Clay__HashNumber
+     * weakness where small sequential (counter, seed) pairs collide */
+    seed *= 2654435761u;
     return Clay__HashNumber(counter, seed);
 }
 
