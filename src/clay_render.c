@@ -28,11 +28,23 @@
  * Feature Definition (file scope)
  * ============================================================================
  *
- * Defines the ClayRenderable feature at OnStore phase. This creates static
- * variables used by _CEL_Feature and _CEL_Provides. Matches the 3-step
- * pattern from cels-ncurses/src/renderer/tui_renderer.c.
+ * Defines the ClayRenderable feature at OnStore phase. Expanded manually
+ * from _CEL_DefineFeature to use non-static linkage so the ensure function
+ * is visible from clay_ncurses_renderer.c (INTERFACE library compiles each
+ * source as a separate TU in the consumer's context).
  */
-_CEL_DefineFeature(ClayRenderable, .phase = CELS_Phase_OnStore, .priority = 0);
+cels_entity_t ClayRenderable_feature_id = 0;
+FeatureProps ClayRenderable_feature_props;
+cels_entity_t ClayRenderable_ensure(void) {
+    if (ClayRenderable_feature_id == 0) {
+        ClayRenderable_feature_props = (FeatureProps){
+            .phase = CELS_Phase_OnStore, .priority = 0
+        };
+        ClayRenderable_feature_id = cels_feature_define(
+            "ClayRenderable", &ClayRenderable_feature_props);
+    }
+    return ClayRenderable_feature_id;
+}
 
 /* ============================================================================
  * Component Registration

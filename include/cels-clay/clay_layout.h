@@ -86,7 +86,21 @@ extern cels_entity_t ClaySurfaceConfig_ensure(void);
  *       }
  *   }
  */
-CEL_Composition(ClaySurface, float width; float height;) {
+/* ClaySurface composition -- manually expanded from CEL_Composition to use
+ * static linkage, avoiding multiple-definition errors when included by
+ * multiple TUs in the INTERFACE library pattern. */
+typedef struct ClaySurfaceProps {
+    LifecycleDef_C* lifecycle;
+    float width;
+    float height;
+} ClaySurfaceProps;
+static void ClaySurface_Impl(ClaySurfaceProps props);
+static void ClaySurface_factory(void* _raw_props) {
+    ClaySurfaceProps _p = {0};
+    if (_raw_props) _p = *(ClaySurfaceProps*)_raw_props;
+    ClaySurface_Impl(_p);
+}
+static void ClaySurface_Impl(ClaySurfaceProps props) {
     CEL_Has(ClaySurfaceConfig, .width = props.width, .height = props.height);
 }
 

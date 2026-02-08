@@ -31,6 +31,7 @@
 #include <cels/cels.h>
 #include <cels-clay/clay_layout.h>
 #include <clay.h>
+#include <flecs.h>
 #include "components.h"
 #include "theme.h"
 
@@ -191,7 +192,7 @@ CEL_Clay_Layout(nav_item_layout) {
         },
         .backgroundColor = bg
     ) {
-        CLAY_TEXT(CLAY_STRING(item->label),
+        CLAY_TEXT(CEL_Clay_Text(item->label, (int)strlen(item->label)),
             CLAY_TEXT_CONFIG({ .textColor = text_color }));
     }
 }
@@ -231,7 +232,7 @@ CEL_Clay_Layout(content_area_layout) {
         }
     ) {
         /* Content title showing current page name */
-        CLAY_TEXT(CLAY_STRING(page_names[page]),
+        CLAY_TEXT(CEL_Clay_Text(page_names[page], (int)strlen(page_names[page])),
             CLAY_TEXT_CONFIG({ .textColor = theme->text_accent }));
 
         /* Page content injected here */
@@ -496,28 +497,10 @@ CEL_Clay_Layout(about_page_layout) {
  * Compositions define the entity tree structure. Each attaches a ClayUI
  * component with a layout function pointer. The layout system calls these
  * functions per-frame during the Clay layout pass.
+ *
+ * Ordering: leaf compositions first, parents after, so #define macros
+ * (shorthand) are visible before use in parent compositions.
  */
-
-/* -- AppShell: root layout container --------------------------------------- */
-
-#define AppShell(...) CEL_Init(AppShell, __VA_ARGS__)
-CEL_Composition(AppShell) {
-    (void)props;
-    CEL_Has(ClayUI, .layout_fn = app_shell_layout);
-
-    TitleBar() {}
-    MainBody() {
-        Sidebar() {
-            NavItem(.label = "Home",     .index = 0) {}
-            NavItem(.label = "Settings", .index = 1) {}
-            NavItem(.label = "About",    .index = 2) {}
-        }
-        ContentArea() {
-            ContentRouter() {}
-        }
-    }
-    StatusBar() {}
-}
 
 /* -- TitleBar -------------------------------------------------------------- */
 
@@ -535,22 +518,6 @@ CEL_Composition(StatusBar) {
     CEL_Has(ClayUI, .layout_fn = status_bar_layout);
 }
 
-/* -- MainBody: horizontal split -------------------------------------------- */
-
-#define MainBody(...) CEL_Init(MainBody, __VA_ARGS__)
-CEL_Composition(MainBody) {
-    (void)props;
-    CEL_Has(ClayUI, .layout_fn = main_body_layout);
-}
-
-/* -- Sidebar --------------------------------------------------------------- */
-
-#define Sidebar(...) CEL_Init(Sidebar, __VA_ARGS__)
-CEL_Composition(Sidebar) {
-    (void)props;
-    CEL_Has(ClayUI, .layout_fn = sidebar_layout);
-}
-
 /* -- NavItem: sidebar entry with label and index --------------------------- */
 
 #define NavItem(...) CEL_Init(NavItem, __VA_ARGS__)
@@ -559,27 +526,12 @@ CEL_Composition(NavItem, const char* label; int index;) {
     CEL_Has(NavItemData, .label = props.label, .index = props.index);
 }
 
-/* -- ContentArea ----------------------------------------------------------- */
+/* -- Sidebar --------------------------------------------------------------- */
 
-#define ContentArea(...) CEL_Init(ContentArea, __VA_ARGS__)
-CEL_Composition(ContentArea) {
+#define Sidebar(...) CEL_Init(Sidebar, __VA_ARGS__)
+CEL_Composition(Sidebar) {
     (void)props;
-    CEL_Has(ClayUI, .layout_fn = content_area_layout);
-}
-
-/* -- ContentRouter: watches NavState and mounts active page ---------------- */
-
-#define ContentRouter(...) CEL_Init(ContentRouter, __VA_ARGS__)
-CEL_Composition(ContentRouter) {
-    (void)props;
-    NavState_t* nav = CEL_Watch(NavState);
-
-    switch (nav->current_page) {
-        case 0:  HomePage() {}     break;
-        case 1:  SettingsPage() {} break;
-        case 2:  AboutPage() {}    break;
-        default: HomePage() {}     break;
-    }
+    CEL_Has(ClayUI, .layout_fn = sidebar_layout);
 }
 
 /* -- HomePage -------------------------------------------------------------- */
@@ -606,6 +558,58 @@ CEL_Composition(SettingsPage) {
 CEL_Composition(AboutPage) {
     (void)props;
     CEL_Has(ClayUI, .layout_fn = about_page_layout);
+}
+
+/* -- ContentRouter: watches NavState and mounts active page ---------------- */
+
+#define ContentRouter(...) CEL_Init(ContentRouter, __VA_ARGS__)
+CEL_Composition(ContentRouter) {
+    (void)props;
+    NavState_t* nav = CEL_Watch(NavState);
+
+    switch (nav->current_page) {
+        case 0:  HomePage() {}     break;
+        case 1:  SettingsPage() {} break;
+        case 2:  AboutPage() {}    break;
+        default: HomePage() {}     break;
+    }
+}
+
+/* -- ContentArea ----------------------------------------------------------- */
+
+#define ContentArea(...) CEL_Init(ContentArea, __VA_ARGS__)
+CEL_Composition(ContentArea) {
+    (void)props;
+    CEL_Has(ClayUI, .layout_fn = content_area_layout);
+}
+
+/* -- MainBody: horizontal split -------------------------------------------- */
+
+#define MainBody(...) CEL_Init(MainBody, __VA_ARGS__)
+CEL_Composition(MainBody) {
+    (void)props;
+    CEL_Has(ClayUI, .layout_fn = main_body_layout);
+}
+
+/* -- AppShell: root layout container --------------------------------------- */
+
+#define AppShell(...) CEL_Init(AppShell, __VA_ARGS__)
+CEL_Composition(AppShell) {
+    (void)props;
+    CEL_Has(ClayUI, .layout_fn = app_shell_layout);
+
+    TitleBar() {}
+    MainBody() {
+        Sidebar() {
+            NavItem(.label = "Home",     .index = 0) {}
+            NavItem(.label = "Settings", .index = 1) {}
+            NavItem(.label = "About",    .index = 2) {}
+        }
+        ContentArea() {
+            ContentRouter() {}
+        }
+    }
+    StatusBar() {}
 }
 
 #endif /* DEMO_PAGES_H */

@@ -63,4 +63,8 @@ extern Clay_RenderCommandArray cel_clay_get_render_commands(void);
 extern void _cel_clay_render_init(void);
 extern void _cel_clay_render_system_register(void);
 
+/* ClayRenderable feature ensure function (non-static for cross-TU visibility
+ * in INTERFACE library). Used by clay_ncurses_renderer.c via _CEL_Provides. */
+extern cels_entity_t ClayRenderable_ensure(void);
+
 #endif /* CELS_CLAY_RENDER_H */

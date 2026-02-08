@@ -204,9 +204,11 @@ static void render_border(TUI_DrawContext* ctx, TUI_CellRect rect,
  *   4. Iterate render commands, dispatch by type
  */
 
-static void clay_ncurses_render(ecs_iter_t* it) {
-    for (int i = 0; i < it->count; i++) {
-        ClayRenderableData* data = ecs_field(it, ClayRenderableData, 0);
+static void clay_ncurses_render(CELS_Iter* it) {
+    int count = cels_iter_count(it);
+    ClayRenderableData* data = (ClayRenderableData*)cels_iter_column(
+        it, ClayRenderableDataID, sizeof(ClayRenderableData));
+    for (int i = 0; i < count; i++) {
         if (!data->dirty) continue;
 
         /* Get background layer and draw context */
