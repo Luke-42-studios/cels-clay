@@ -91,11 +91,11 @@ Plans:
   2. Static and dynamic text content renders correctly, with dynamic text updating when CELS state changes
   3. A button element shows visual feedback (highlight) when selected via keyboard navigation
   4. The full pipeline works: CELS compositions define structure, Clay computes layout, ncurses renders output, and state changes trigger visible UI updates
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 05-01: Demo app composition structure (sidebar + content + button)
-- [ ] 05-02: End-to-end wiring and integration validation
+- [ ] 05-01-PLAN.md -- Complete demo app: source files (main.c, components.h, theme.h, pages.h) + CMake target (wave 1)
+- [ ] 05-02-PLAN.md -- Build validation, bug fixes, and end-to-end user verification (wave 2)
 
 ## Progress
 
@@ -112,4 +112,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 
 ---
 *Roadmap created: 2026-02-07*
-*Last updated: 2026-02-08 after Phase 4 execution*
+*Last updated: 2026-02-08 after Phase 5 planning*
