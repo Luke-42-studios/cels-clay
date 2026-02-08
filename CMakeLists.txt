@@ -55,3 +55,20 @@ target_include_directories(cels-clay INTERFACE
 target_link_libraries(cels-clay INTERFACE
     cels
 )
+
+# ============================================================================
+# Optional ncurses renderer (when cels-ncurses is available)
+# ============================================================================
+# The ncurses renderer translates Clay render commands into terminal output
+# using cels-ncurses drawing primitives. Conditionally compiled only when
+# cels-ncurses exists as a CMake target (i.e., the consumer links both modules).
+# The INTERFACE link propagates ncurses include paths and link flags to consumers.
+
+if(TARGET cels-ncurses)
+    target_sources(cels-clay INTERFACE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/clay_ncurses_renderer.c
+    )
+    target_link_libraries(cels-clay INTERFACE
+        cels-ncurses
+    )
+endif()
