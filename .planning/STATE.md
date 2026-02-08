@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-07)
 
 **Core value:** Declarative UI development where CELS handles application state and reactivity while Clay handles layout
-**Current focus:** Phase 2 complete. Next: Phase 3 - Render Bridge + Module Definition
+**Current focus:** Phase 3 in progress. Plan 1 (Render Bridge) complete. Next: Plan 2 (Module Definition)
 
 ## Current Position
 
-Phase: 2 of 5 (Layout System Core) -- COMPLETE
-Plan: 3 of 3 in current phase
-Status: Phase verified, goal achieved
-Last activity: 2026-02-08 -- Phase 2 verified (1 gap fixed: CEL_Clay macro syntax)
+Phase: 3 of 5 (Render Bridge + Module Definition)
+Plan: 1 of 2 in current phase
+Status: In progress
+Last activity: 2026-02-08 -- Completed 03-01-PLAN.md (Render Bridge)
 
-Progress: [====......] 33%
+Progress: [======....] 60%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 5
-- Average duration: 2.6 min
-- Total execution time: 13 min
+- Total plans completed: 6
+- Average duration: 2.7 min
+- Total execution time: 16 min
 
 **By Phase:**
 
@@ -29,9 +29,10 @@ Progress: [====......] 33%
 |-------|-------|-------|----------|
 | 1 | 2 | 4 min | 2 min |
 | 2 | 3 | 9 min | 3 min |
+| 3 | 1 | 3 min | 3 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-02 (2 min), 02-01 (3 min), 02-02 (4 min), 02-03 (2 min)
+- Last 5 plans: 02-01 (3 min), 02-02 (4 min), 02-03 (2 min), 03-01 (3 min)
 - Trend: Stable around 2-4 min per plan
 
 *Updated after each plan completion*
@@ -64,6 +65,9 @@ Recent decisions affecting current work:
 - [02-03]: ClaySurface composition in header -- CEL_Composition generates static functions, safe across TUs
 - [02-03]: Shorthand macro AFTER composition definition to prevent preprocessor token conflict
 - [02-03]: No if/else guard on CEL_Clay -- Clay error handler catches misuse
+- [03-01]: dirty flag = (commands.length > 0) -- simple always-dirty approach, optimize later if needed
+- [03-01]: Render dispatch uses internal _cel_clay_get_render_commands/get_layout_dimensions, not public API
+- [03-01]: System registration order: layout (PreStore) then dispatch (OnStore), providers finalized lazily after
 
 ### Pending Todos
 
@@ -78,6 +82,6 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-08
-Stopped at: Phase 2 Layout System Core verified and complete. All 5 success criteria met.
+Stopped at: Completed 03-01-PLAN.md (Render Bridge). Next: 03-02 Module Definition.
 Resume file: None
 Key reference: .planning/API-DESIGN.md
