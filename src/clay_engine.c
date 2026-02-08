@@ -16,6 +16,7 @@
 
 #include "cels-clay/clay_engine.h"
 #include "cels-clay/clay_layout.h"
+#include "cels-clay/clay_render.h"
 #include "clay.h"
 
 #include <stdlib.h>
@@ -112,10 +113,16 @@ _CEL_DefineModule(Clay_Engine) {
     /* 4. Initialize layout subsystem (frame arena, text measurement, components) */
     _cel_clay_layout_init();
 
-    /* 5. Register layout system at PreStore phase */
-    _cel_clay_layout_system_register();
+    /* 5. Initialize render bridge (singleton entity, feature declaration) */
+    _cel_clay_render_init();
 
-    /* 6. Register cleanup for process exit */
+    /* 6. Register systems in correct order:
+     *    a) Layout at PreStore (runs first each frame)
+     *    b) Render dispatch at OnStore (runs after layout, before providers) */
+    _cel_clay_layout_system_register();
+    _cel_clay_render_system_register();
+
+    /* 7. Register cleanup for process exit */
     atexit(clay_cleanup);
 }
 

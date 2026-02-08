@@ -44,6 +44,7 @@ target_sources(cels-clay INTERFACE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/clay_impl.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/clay_engine.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/clay_layout.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/clay_render.c
 )
 
 target_include_directories(cels-clay INTERFACE

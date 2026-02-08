@@ -163,6 +163,7 @@ static ecs_world_t* g_layout_world = NULL;
 static cels_entity_t g_layout_current_entity = 0;
 static bool g_layout_pass_active = false;
 static Clay_RenderCommandArray g_last_render_commands = {0};
+static Clay_Dimensions g_last_layout_dimensions = {0, 0};
 
 /* Forward declarations for tree walk (mutually recursive) */
 static void clay_walk_entity(ecs_world_t* world, ecs_entity_t entity);
@@ -294,6 +295,10 @@ Clay_RenderCommandArray _cel_clay_get_render_commands(void) {
     return g_last_render_commands;
 }
 
+Clay_Dimensions _cel_clay_get_layout_dimensions(void) {
+    return g_last_layout_dimensions;
+}
+
 /* ============================================================================
  * Layout System (PreStore phase)
  * ============================================================================
@@ -327,6 +332,10 @@ static void ClayLayoutSystem_callback(ecs_iter_t* it) {
                 .width = config->width,
                 .height = config->height
             });
+            g_last_layout_dimensions = (Clay_Dimensions){
+                .width = config->width,
+                .height = config->height
+            };
 
             /* 2. Reset frame arena for this pass */
             _cel_clay_frame_arena_reset();

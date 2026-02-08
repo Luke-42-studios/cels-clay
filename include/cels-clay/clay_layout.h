@@ -178,6 +178,8 @@ extern Clay_ElementId _cel_clay_auto_id(uint32_t counter);
 extern void _cel_clay_emit_children(void);
 extern Clay_String _cel_clay_frame_arena_string(const char* buf, int32_t len);
 extern bool _cel_clay_layout_active(void);
+extern Clay_RenderCommandArray _cel_clay_get_render_commands(void);
+extern Clay_Dimensions _cel_clay_get_layout_dimensions(void);
 
 /* ============================================================================
  * Layout Subsystem Lifecycle
