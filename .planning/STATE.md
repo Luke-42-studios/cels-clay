@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-07)
 
 **Core value:** Declarative UI development where CELS handles application state and reactivity while Clay handles layout
-**Current focus:** Phase 4 verified. Next: Phase 5 (Demo App + Integration)
+**Current focus:** Phase 5, Plan 1 complete. Next: Plan 05-02 (runtime verification + polish)
 
 ## Current Position
 
-Phase: 4 of 5 (ncurses Clay Renderer) -- VERIFIED
-Plan: 2 of 2 in current phase
-Status: Phase verified, goal achieved (5/5 must-haves passed)
-Last activity: 2026-02-08 -- Phase 4 verified and complete
+Phase: 5 of 5 (Demo App + Integration)
+Plan: 1 of 2 in current phase
+Status: In progress
+Last activity: 2026-02-08 -- Completed 05-01-PLAN.md
 
-Progress: [=========.] 82%
+Progress: [=========.] 91%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 9
-- Average duration: 2.6 min
-- Total execution time: 23 min
+- Total plans completed: 10
+- Average duration: 3.5 min
+- Total execution time: 35 min
 
 **By Phase:**
 
@@ -31,10 +31,11 @@ Progress: [=========.] 82%
 | 2 | 3 | 9 min | 3 min |
 | 3 | 2 | 5 min | 2.5 min |
 | 4 | 2 | 5 min | 2.5 min |
+| 5 | 1 | 12 min | 12 min |
 
 **Recent Trend:**
-- Last 5 plans: 03-01 (3 min), 03-02 (2 min), 04-01 (4 min), 04-02 (1 min)
-- Trend: Stable 1-4 min per plan
+- Last 5 plans: 03-02 (2 min), 04-01 (4 min), 04-02 (1 min), 05-01 (12 min)
+- Trend: 05-01 longer due to first consumer build (4 cross-TU bug fixes)
 
 *Updated after each plan completion*
 
@@ -60,10 +61,8 @@ Recent decisions affecting current work:
 - [02-01]: Frame arena 16KB fixed, overflow to stderr, no dynamic growth
 - [02-01]: Forward-declared Clay__HashNumber (lacks CLAY_DLL_EXPORT but linker symbol exists from clay_impl.c)
 - [02-01]: Text measurement: 1 char = 1 unit width, newlines increment height (terminal cell model)
-- [02-02]: System callback uses ecs_iter_t* (flecs native) not CELS_Iter* -- direct flecs system requires flecs callback signature
 - [02-02]: Render commands stored in static global, returned by value via _cel_clay_get_render_commands
 - [02-02]: Layout cleanup called before Clay arena free in clay_cleanup (independent allocations, safe ordering)
-- [02-03]: ClaySurface composition in header -- CEL_Composition generates static functions, safe across TUs
 - [02-03]: Shorthand macro AFTER composition definition to prevent preprocessor token conflict
 - [02-03]: No if/else guard on CEL_Clay -- Clay error handler catches misuse
 - [03-01]: dirty flag = (commands.length > 0) -- simple always-dirty approach, optimize later if needed
@@ -81,6 +80,14 @@ Recent decisions affecting current work:
 - [04-02]: Scroll handler is app-callable plain function, not ECS system -- app controls focus
 - [04-02]: Priority fallback: Vim raw_key first, then CELS nav keys, then axis -- prevents double-scrolling
 - [04-02]: gg uses cross-frame static state (g_prev_raw_key) -- second g in consecutive frames triggers scroll-to-top
+- [05-01]: DemoInputSystem_ensure() in CEL_Build (not CEL_Use) -- system in main.c, compositions in pages.h
+- [05-01]: ContentRouter has no ClayUI -- transparent pass-through in layout tree walker
+- [05-01]: Settings toggle selection reuses sidebar_selected when focus_pane == 1
+- [05-01]: Static ClaySurface_Impl -- fixes INTERFACE library multi-TU multiple-definition error
+- [05-01]: Non-static ClayRenderable_ensure -- cross-TU visibility for _CEL_Provides in INTERFACE lib
+- [05-01]: Renderer callback accepts CELS_Iter* (corrected from ecs_iter_t*) -- type-safe provider registration
+- [05-01]: Leaf compositions first in pages.h -- #define macros must be visible before parent uses them
+- [05-01]: CLAY_STRING for literals only; CEL_Clay_Text(ptr, strlen) for dynamic strings from components
 
 ### Pending Todos
 
@@ -88,12 +95,13 @@ None.
 
 ### Blockers/Concerns
 
-- No consumer target links to cels-clay yet -- runtime testing requires a consumer executable or test target
+- Runtime testing still needed -- demo compiles but has not been run yet (visual verification deferred to 05-02)
 - CELS test suite (test_cels) has pre-existing compilation failures from v0.2 API changes (CEL_Call -> CEL_Init) -- unrelated to cels-clay
+- Open questions from research: aspect ratio alignment, border color focus indication, theme toggle visual effect -- require runtime verification
 
 ## Session Continuity
 
-Last session: 2026-02-08
-Stopped at: Phase 4 verified and complete. All 5 success criteria met. Next: Phase 5 (Demo App + Integration).
+Last session: 2026-02-08 23:25 UTC
+Stopped at: Completed 05-01-PLAN.md. Demo app compiles. Next: 05-02 (runtime verification + polish).
 Resume file: None
 Key reference: .planning/API-DESIGN.md
