@@ -64,6 +64,35 @@ extern cels_entity_t ClaySurfaceConfigID;
 extern cels_entity_t ClaySurfaceConfig_ensure(void);
 
 /* ============================================================================
+ * ClaySurface Composition (built-in)
+ * ============================================================================
+ *
+ * ClaySurface owns the Clay layout pass boundary. Wrapping compositions
+ * inside ClaySurface makes them participate in Clay layout. The layout
+ * system (ClayLayoutSystem at PreStore) finds entities with ClaySurfaceConfig
+ * and runs BeginLayout -> tree walk -> EndLayout for each.
+ *
+ * Accepts reactive dimensions (width, height). Wire window size to these
+ * props for resize support -- when props change, CELS recomposition updates
+ * ClaySurfaceConfig, and the next layout frame picks up new dimensions via
+ * Clay_SetLayoutDimensions().
+ *
+ * Usage:
+ *   CEL_Root(App) {
+ *       Clay_Engine_use((Clay_EngineConfig){0});
+ *       ClaySurface(.width = 80, .height = 24) {
+ *           Sidebar() {}
+ *           Content() {}
+ *       }
+ *   }
+ */
+CEL_Composition(ClaySurface, float width; float height;) {
+    CEL_Has(ClaySurfaceConfig, .width = props.width, .height = props.height);
+}
+
+#define ClaySurface(...) CEL_Init(ClaySurface, __VA_ARGS__)
+
+/* ============================================================================
  * CEL_Clay_Layout(name)
  * ============================================================================
  *
