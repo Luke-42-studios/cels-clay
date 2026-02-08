@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-07)
 
 **Core value:** Declarative UI development where CELS handles application state and reactivity while Clay handles layout
-**Current focus:** Phase 3 verified. Next: Phase 4 (ncurses Clay Renderer)
+**Current focus:** Phase 4 plan 1 complete. Next: Phase 4 plan 2 (scroll navigation)
 
 ## Current Position
 
-Phase: 3 of 5 (Render Bridge + Module Definition) -- COMPLETE
-Plan: 2 of 2 in current phase
-Status: Phase verified, goal achieved
-Last activity: 2026-02-08 -- Phase 3 verified (3/3 must-haves passed)
+Phase: 4 of 5 (ncurses Clay Renderer) -- In progress
+Plan: 1 of 2 in current phase
+Status: In progress
+Last activity: 2026-02-08 -- Completed 04-01-PLAN.md (ncurses renderer core)
 
-Progress: [=======...] 58%
+Progress: [========..] 73%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 7
-- Average duration: 2.6 min
-- Total execution time: 18 min
+- Total plans completed: 8
+- Average duration: 2.8 min
+- Total execution time: 22 min
 
 **By Phase:**
 
@@ -30,10 +30,11 @@ Progress: [=======...] 58%
 | 1 | 2 | 4 min | 2 min |
 | 2 | 3 | 9 min | 3 min |
 | 3 | 2 | 5 min | 2.5 min |
+| 4 | 1 | 4 min | 4 min |
 
 **Recent Trend:**
-- Last 5 plans: 02-02 (4 min), 02-03 (2 min), 03-01 (3 min), 03-02 (2 min)
-- Trend: Stable around 2-3 min per plan
+- Last 5 plans: 02-03 (2 min), 03-01 (3 min), 03-02 (2 min), 04-01 (4 min)
+- Trend: Stable 2-4 min per plan
 
 *Updated after each plan completion*
 
@@ -72,6 +73,11 @@ Recent decisions affecting current work:
 - [03-02]: No error_handler in config -- internal handler sufficient, avoids Clay_ErrorData coupling
 - [03-02]: Composable wrappers skip arena -- caller responsible for Clay_Initialize when using individual pieces
 - [03-02]: NULL config to Clay_Engine_use means use all defaults (zero-initialized static config)
+- [04-01]: TUI_BORDER_SINGLE for v1 borders -- default theme matches, custom chars deferred to v2
+- [04-01]: Dual bbox converters: clay_bbox_to_cells (aspect-ratio) vs clay_text_bbox_to_cells (cell-accurate)
+- [04-01]: Text x-position still aspect-scaled even for text bbox -- only width is unscaled
+- [04-01]: Omitted init_theme_border_chars cchar_t conversion -- not needed with TUI_BORDER_SINGLE
+- [04-01]: Stack buffer 512 bytes for StringSlice null-termination, malloc fallback for long strings
 
 ### Pending Todos
 
@@ -79,13 +85,13 @@ None.
 
 ### Blockers/Concerns
 
-- cels-ncurses drawing primitives gap: PROJECT.md notes the planned graphics API is "not yet built." Phase 4 may need to build ncurses drawing helpers or work directly on stdscr.
 - No consumer target links to cels-clay yet -- runtime testing requires a consumer executable or test target
 - CELS test suite (test_cels) has pre-existing compilation failures from v0.2 API changes (CEL_Call -> CEL_Init) -- unrelated to cels-clay
+- cels-ncurses drawing primitives blocker RESOLVED: Phase 4 plan 1 confirmed all needed tui_draw_* APIs exist
 
 ## Session Continuity
 
 Last session: 2026-02-08
-Stopped at: Phase 3 verified and complete. All 3 success criteria met. Next: Phase 4 (ncurses Clay Renderer).
+Stopped at: Completed 04-01-PLAN.md. Next: 04-02-PLAN.md (scroll navigation).
 Resume file: None
 Key reference: .planning/API-DESIGN.md
