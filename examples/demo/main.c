@@ -63,50 +63,66 @@ CEL_System(DemoInputSystem, .phase = CELS_Phase_OnUpdate) {
     CELS_Context* ctx = cels_get_context();
     const CELS_Input* input = cels_input_get(ctx);
 
-    /* ---- Vim navigation keys via raw_key ---- */
+    /* ---- Navigation: arrow keys (axis_left) + Vim keys (raw_key) ---- */
+    bool nav_down = false, nav_up = false, nav_left = false, nav_right = false;
+
+    /* Arrow keys via axis_left (also triggers on WASD) */
+    if (input->axis_left[1] > 0 && g_prev_input.axis_left[1] <= 0)
+        nav_down = true;
+    if (input->axis_left[1] < 0 && g_prev_input.axis_left[1] >= 0)
+        nav_up = true;
+    if (input->axis_left[0] < 0 && g_prev_input.axis_left[0] >= 0)
+        nav_left = true;
+    if (input->axis_left[0] > 0 && g_prev_input.axis_left[0] <= 0)
+        nav_right = true;
+
+    /* Vim keys via raw_key */
     if (input->has_raw_key && !g_prev_input.has_raw_key) {
         switch (input->raw_key) {
-            case 'j': /* Move selection down */
-                CEL_Update(NavState) {
-                    if (NavState.focus_pane == 0) {
-                        /* Sidebar: cycle through 3 items */
-                        NavState.sidebar_selected++;
-                        if (NavState.sidebar_selected > 2)
-                            NavState.sidebar_selected = 0;
-                    } else if (NavState.current_page == 1) {
-                        /* Settings: cycle through 2 toggles */
-                        NavState.sidebar_selected++;
-                        if (NavState.sidebar_selected > 1)
-                            NavState.sidebar_selected = 0;
-                    }
-                }
-                break;
+            case 'j': nav_down  = true; break;
+            case 'k': nav_up    = true; break;
+            case 'h': nav_left  = true; break;
+            case 'l': nav_right = true; break;
+        }
+    }
 
-            case 'k': /* Move selection up */
-                CEL_Update(NavState) {
-                    if (NavState.focus_pane == 0) {
-                        NavState.sidebar_selected--;
-                        if (NavState.sidebar_selected < 0)
-                            NavState.sidebar_selected = 2;
-                    } else if (NavState.current_page == 1) {
-                        NavState.sidebar_selected--;
-                        if (NavState.sidebar_selected < 0)
-                            NavState.sidebar_selected = 1;
-                    }
-                }
-                break;
+    if (nav_down) {
+        CEL_Update(NavState) {
+            if (NavState.focus_pane == 0) {
+                NavState.sidebar_selected++;
+                if (NavState.sidebar_selected > 2)
+                    NavState.sidebar_selected = 0;
+            } else if (NavState.current_page == 1) {
+                NavState.sidebar_selected++;
+                if (NavState.sidebar_selected > 1)
+                    NavState.sidebar_selected = 0;
+            }
+        }
+    }
 
-            case 'h': /* Focus sidebar */
-                CEL_Update(NavState) {
-                    NavState.focus_pane = 0;
-                }
-                break;
+    if (nav_up) {
+        CEL_Update(NavState) {
+            if (NavState.focus_pane == 0) {
+                NavState.sidebar_selected--;
+                if (NavState.sidebar_selected < 0)
+                    NavState.sidebar_selected = 2;
+            } else if (NavState.current_page == 1) {
+                NavState.sidebar_selected--;
+                if (NavState.sidebar_selected < 0)
+                    NavState.sidebar_selected = 1;
+            }
+        }
+    }
 
-            case 'l': /* Focus content */
-                CEL_Update(NavState) {
-                    NavState.focus_pane = 1;
-                }
-                break;
+    if (nav_left) {
+        CEL_Update(NavState) {
+            NavState.focus_pane = 0;
+        }
+    }
+
+    if (nav_right) {
+        CEL_Update(NavState) {
+            NavState.focus_pane = 1;
         }
     }
 

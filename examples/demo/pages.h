@@ -51,6 +51,7 @@
 
 CEL_Clay_Layout(app_shell_layout) {
     (void)world; (void)self;
+    const DemoTheme* theme = demo_get_theme(DemoSettings.color_mode);
     CEL_Clay(
         .layout = {
             .layoutDirection = CLAY_TOP_TO_BOTTOM,
@@ -58,7 +59,8 @@ CEL_Clay_Layout(app_shell_layout) {
                 .width = CLAY_SIZING_GROW(0),
                 .height = CLAY_SIZING_GROW(0)
             }
-        }
+        },
+        .backgroundColor = theme->content_bg
     ) {
         CEL_Clay_Children();
     }
@@ -112,7 +114,7 @@ CEL_Clay_Layout(status_bar_layout) {
         }
     ) {
         CLAY_TEXT(
-            CLAY_STRING("j/k: navigate  h/l: switch pane  Enter: select  q: quit"),
+            CLAY_STRING("Arrows/jk: navigate  Arrows/hl: pane  Enter: select  q: quit"),
             CLAY_TEXT_CONFIG({ .textColor = theme->text_secondary }));
     }
 }
@@ -121,6 +123,7 @@ CEL_Clay_Layout(status_bar_layout) {
 
 CEL_Clay_Layout(main_body_layout) {
     (void)world; (void)self;
+    const DemoTheme* theme = demo_get_theme(DemoSettings.color_mode);
     CEL_Clay(
         .layout = {
             .layoutDirection = CLAY_LEFT_TO_RIGHT,
@@ -128,7 +131,8 @@ CEL_Clay_Layout(main_body_layout) {
                 .width = CLAY_SIZING_GROW(0),
                 .height = CLAY_SIZING_GROW(0)
             }
-        }
+        },
+        .backgroundColor = theme->content_bg
     ) {
         CEL_Clay_Children();
     }
@@ -173,7 +177,7 @@ CEL_Clay_Layout(nav_item_layout) {
     bool sidebar_focused = (NavState.focus_pane == 0);
 
     /* Selected item gets highlight background; brighter if sidebar is focused */
-    Clay_Color bg = {0, 0, 0, 0};
+    Clay_Color bg = theme->sidebar_bg;
     Clay_Color text_color = theme->text_primary;
     if (is_selected) {
         bg = theme->selected_bg;
@@ -254,7 +258,8 @@ CEL_Clay_Layout(home_page_layout) {
                 .height = CLAY_SIZING_GROW(0)
             },
             .childGap = 1
-        }
+        },
+        .backgroundColor = theme->content_bg
     ) {
         /* Welcome text */
         CLAY_TEXT(CLAY_STRING("Welcome to cels-clay"),
@@ -268,7 +273,8 @@ CEL_Clay_Layout(home_page_layout) {
                 .layoutDirection = CLAY_LEFT_TO_RIGHT,
                 .sizing = { .width = CLAY_SIZING_GROW(0) },
                 .childGap = 1
-            }
+            },
+            .backgroundColor = theme->content_bg
         ) {
             /* Box 1: Reactive state */
             CEL_Clay(
@@ -349,14 +355,15 @@ CEL_Clay_Layout(settings_page_layout) {
                 .height = CLAY_SIZING_GROW(0)
             },
             .childGap = 1
-        }
+        },
+        .backgroundColor = theme->content_bg
     ) {
         /* Toggle 0: Show Borders */
         {
             bool item_selected = content_focused
                 && (NavState.sidebar_selected == 0);
             Clay_Color bg = item_selected
-                ? theme->selected_bg : (Clay_Color){0, 0, 0, 0};
+                ? theme->selected_bg : theme->content_bg;
             Clay_Color tc = item_selected
                 ? theme->text_accent : theme->text_primary;
 
@@ -382,7 +389,7 @@ CEL_Clay_Layout(settings_page_layout) {
             bool item_selected = content_focused
                 && (NavState.sidebar_selected == 1);
             Clay_Color bg = item_selected
-                ? theme->selected_bg : (Clay_Color){0, 0, 0, 0};
+                ? theme->selected_bg : theme->content_bg;
             Clay_Color tc = item_selected
                 ? theme->text_accent : theme->text_primary;
 
@@ -426,6 +433,7 @@ CEL_Clay_Layout(about_page_layout) {
             .padding = CLAY_PADDING_ALL(1),
             .childGap = 1
         },
+        .backgroundColor = theme->content_bg,
         .clip = {
             .vertical = true,
             .childOffset = Clay_GetScrollOffset()
