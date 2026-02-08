@@ -76,12 +76,11 @@ Plans:
   3. Borders render with Unicode box-drawing characters (single-line with corners and edges)
   4. Scissor/clipping restricts rendering to the scissor rect (content outside bounds is not drawn)
   5. RGBA colors from Clay map to ncurses 8/16 color pairs via nearest-match lookup
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 04-01: Core rendering (rectangles, text, coordinate mapping, color pairs)
-- [ ] 04-02: Borders, scissor/clipping, wide character measurement
-- [ ] 04-03: Scroll container keyboard navigation
+- [ ] 04-01-PLAN.md -- Complete renderer: theme struct, provider callback (rectangles, text, borders, scissor), coordinate mapping with aspect ratio, color mapping, text measurement callback, CMake wiring (wave 1)
+- [ ] 04-02-PLAN.md -- Scroll container keyboard navigation: Vim-style j/k/Ctrl-U/Ctrl-D/G/gg bindings, Page Up/Down, arrow keys (wave 2)
 
 ### Phase 5: Demo App + Integration
 **Goal**: A working terminal application proves CELS state + Clay layout + ncurses rendering work together end-to-end
@@ -108,9 +107,9 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 | 1. Build System + Clay Initialization | 2/2 | Complete | 2026-02-08 |
 | 2. Layout System Core | 3/3 | Complete | 2026-02-08 |
 | 3. Render Bridge + Module Definition | 2/2 | Complete | 2026-02-08 |
-| 4. ncurses Clay Renderer | 0/3 | Not started | - |
+| 4. ncurses Clay Renderer | 0/2 | Not started | - |
 | 5. Demo App + Integration | 0/2 | Not started | - |
 
 ---
 *Roadmap created: 2026-02-07*
-*Last updated: 2026-02-08 after Phase 3 completion*
+*Last updated: 2026-02-08 after Phase 4 planning*
