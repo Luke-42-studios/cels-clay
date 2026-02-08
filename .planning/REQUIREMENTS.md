@@ -15,7 +15,7 @@
 ### Module Core
 
 - [x] **CORE-01**: Clay arena initialized and managed through CELS lifecycle system
-- [ ] **CORE-02**: CEL_DefineModule(Clay_Engine) facade bundles layout + render systems
+- [x] **CORE-02**: CEL_DefineModule(Clay_Engine) facade bundles layout + render systems
 - [x] **CORE-03**: Clay error handler wired to CELS logging (capacity exceeded, duplicate IDs surfaced visibly)
 - [x] **CORE-04**: Terminal dimensions synced to Clay_SetLayoutDimensions each frame from window state
 
@@ -32,10 +32,10 @@
 
 ### Rendering Pipeline
 
-- [ ] **PIPE-01**: ClayRenderable Feature defined by cels-clay module
-- [ ] **PIPE-02**: Provider callback pattern dispatches Clay_RenderCommandArray to registered backends
+- [x] **PIPE-01**: ClayRenderable Feature defined by cels-clay module
+- [x] **PIPE-02**: Provider callback pattern dispatches Clay_RenderCommandArray to registered backends
 - [x] **PIPE-03**: Layout system runs at PreStore phase (after recomposition, before rendering)
-- [ ] **PIPE-04**: Render dispatch runs at OnRender phase (after layout complete)
+- [x] **PIPE-04**: Render dispatch runs at OnRender phase (after layout complete)
 - [x] **PIPE-05**: Entity tree walked in parent-before-child depth-first order for correct CLAY() nesting
 
 ### ncurses Renderer
@@ -98,7 +98,7 @@
 | BUILD-03 | Phase 1 | Complete |
 | BUILD-04 | Phase 1 | Complete |
 | CORE-01 | Phase 1 | Complete |
-| CORE-02 | Phase 3 | Pending |
+| CORE-02 | Phase 3 | Complete |
 | CORE-03 | Phase 1 | Complete |
 | CORE-04 | Phase 2 | Complete |
 | API-01 | Phase 2 | Complete |
@@ -109,10 +109,10 @@
 | API-06 | Phase 2 | Pending |
 | API-07 | Phase 2 | Complete |
 | API-08 | Phase 2 | Complete |
-| PIPE-01 | Phase 3 | Pending |
-| PIPE-02 | Phase 3 | Pending |
+| PIPE-01 | Phase 3 | Complete |
+| PIPE-02 | Phase 3 | Complete |
 | PIPE-03 | Phase 2 | Complete |
-| PIPE-04 | Phase 3 | Pending |
+| PIPE-04 | Phase 3 | Complete |
 | PIPE-05 | Phase 2 | Complete |
 | REND-01 | Phase 4 | Pending |
 | REND-02 | Phase 4 | Pending |
@@ -134,4 +134,4 @@
 
 ---
 *Requirements defined: 2026-02-07*
-*Last updated: 2026-02-08 after Phase 2 completion*
+*Last updated: 2026-02-08 after Phase 3 completion*
