@@ -1,17 +1,22 @@
 /*
  * Clay Engine Module - Clay Layout Integration for CELS
  *
- * Initializes the Clay layout engine (arena allocation, error handler)
- * and manages the Clay lifecycle within the CELS framework.
+ * Initializes the Clay layout engine (arena allocation, error handler,
+ * layout system, render bridge) and manages the Clay lifecycle within
+ * the CELS framework.
  *
  * Usage:
  *   #include <cels-clay/clay_engine.h>
  *
  *   CEL_Build(App) {
- *       Clay_Engine_use((Clay_EngineConfig){
+ *       Clay_Engine_use(&(ClayEngineConfig){
  *           .arena_size = 0,  // 0 = use Clay_MinMemorySize() default
  *       });
  *   }
+ *
+ * Advanced users can initialize subsystems individually:
+ *   clay_layout_use();   // Layout system only
+ *   clay_render_use();   // Render bridge only
  *
  * Consumers who need Clay layout macros (CLAY(), CLAY_TEXT, etc.)
  * should also include clay.h directly -- it is on the include path
@@ -23,6 +28,7 @@
 
 #include <cels/cels.h>
 #include <stdint.h>
+#include "cels-clay/clay_render.h"
 
 /* ===========================================
  * Clay Engine Config
@@ -30,17 +36,27 @@
  *
  * Configuration for Clay_Engine_use().
  * Pass arena_size = 0 to use Clay_MinMemorySize() default.
+ * Pass initial_width/height = 0 to defer dimensions until ClaySurface.
  */
-typedef struct Clay_EngineConfig {
+typedef struct ClayEngineConfig {
     uint32_t arena_size;    /* Override arena capacity in bytes (0 = default) */
-} Clay_EngineConfig;
+    float initial_width;    /* Initial layout width (0 = not set until ClaySurface) */
+    float initial_height;   /* Initial layout height (0 = not set until ClaySurface) */
+} ClayEngineConfig;
 
 /* Module entity ID and init function */
 extern cels_entity_t Clay_Engine;
 extern void Clay_Engine_init(void);
 
 /* Initialize Clay engine module with configuration.
- * Call inside a CEL_Build block. Idempotent -- safe to call multiple times. */
-extern void Clay_Engine_use(Clay_EngineConfig config);
+ * Call inside a CEL_Build block. Idempotent -- safe to call multiple times.
+ * Pass NULL to use all defaults. */
+extern void Clay_Engine_use(const ClayEngineConfig* config);
+
+/* Composable sub-modules (for advanced users who want individual pieces).
+ * NOTE: These do NOT allocate the Clay arena or call Clay_Initialize --
+ * the caller is responsible for Clay setup when using these directly. */
+extern void clay_layout_use(void);   /* Layout system only */
+extern void clay_render_use(void);   /* Render bridge only */
 
 #endif /* CELS_CLAY_ENGINE_H */
