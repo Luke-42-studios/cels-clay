@@ -1,21 +1,22 @@
 /*
- * Clay Layout System - Infrastructure Implementation
+ * Clay Layout System - Complete Implementation
  *
- * Implements the foundational infrastructure for the CELS-Clay layout system:
+ * Implements the CELS-Clay layout system:
  * - Component registration (ClayUI, ClaySurfaceConfig)
  * - Per-frame bump arena for dynamic string lifetime management
  * - Terminal text measurement function (character-cell based)
  * - Auto-ID generation via Clay__HashNumber(counter, entity_id)
- * - Layout pass state globals (used by tree walk in Plan 02)
- *
- * The layout system tree walk and system registration are stubs here,
- * to be implemented in Plan 02.
+ * - Depth-first entity tree walk with transparent pass-through
+ * - CEL_Clay_Children child emission at call site
+ * - PreStore layout system: SetDimensions -> arena reset -> BeginLayout -> walk -> EndLayout
+ * - Render command storage for Phase 3 render bridge
  *
  * NOTE: This file compiles in the CONSUMER's context (INTERFACE library).
  */
 
 #include "cels-clay/clay_layout.h"
 #include "clay.h"
+#include <flecs.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -158,9 +159,14 @@ static Clay_Dimensions _cel_clay_measure_text(
  * entity's layout function. CEL_Clay_Children() reads these to recurse.
  */
 
-static struct ecs_world_t* g_layout_world = NULL;
+static ecs_world_t* g_layout_world = NULL;
 static cels_entity_t g_layout_current_entity = 0;
 static bool g_layout_pass_active = false;
+static Clay_RenderCommandArray g_last_render_commands = {0};
+
+/* Forward declarations for tree walk (mutually recursive) */
+static void clay_walk_entity(ecs_world_t* world, ecs_entity_t entity);
+static void clay_walk_children(ecs_world_t* world, ecs_entity_t parent);
 
 /* ============================================================================
  * Auto-ID Generation
@@ -217,16 +223,158 @@ void _cel_clay_layout_cleanup(void) {
 }
 
 /* ============================================================================
- * Stubs for Plan 02
- * ============================================================================ */
+ * Entity Tree Walk (depth-first, recursive)
+ * ============================================================================
+ *
+ * Walks the CELS entity hierarchy and calls layout functions for entities
+ * with ClayUI components. Non-ClayUI entities are transparent pass-throughs:
+ * their children still participate in the layout tree.
+ *
+ * Current entity is saved/restored for nested CEL_Clay_Children calls.
+ */
 
-void _cel_clay_emit_children(void) {
-    /* Stub: tree walk child emission implemented in Plan 02 */
-    (void)g_layout_world;
-    (void)g_layout_current_entity;
+static void clay_walk_entity(ecs_world_t* world, ecs_entity_t entity) {
+    const ClayUI* layout = (const ClayUI*)ecs_get_id(
+        world, entity, ClayUIID);
+
+    /* Save/restore current entity for nested CEL_Clay_Children calls */
+    ecs_entity_t prev_entity = g_layout_current_entity;
+    g_layout_current_entity = entity;
+
+    if (layout && layout->layout_fn) {
+        /* Entity has a layout function -- call it.
+         * The function body contains CEL_Clay() and CEL_Clay_Children() calls.
+         * Developer MUST call CEL_Clay_Children() to emit children --
+         * children are NOT auto-appended (they'd be outside the CLAY scope). */
+        layout->layout_fn(world, entity);
+    } else {
+        /* No ClayUI component -- transparent pass-through.
+         * Walk children directly so Clay children still participate. */
+        clay_walk_children(world, entity);
+    }
+
+    g_layout_current_entity = prev_entity;
 }
 
+static void clay_walk_children(ecs_world_t* world, ecs_entity_t parent) {
+    ecs_iter_t it = ecs_children(world, parent);
+    while (ecs_children_next(&it)) {
+        for (int i = 0; i < it.count; i++) {
+            clay_walk_entity(world, it.entities[i]);
+        }
+    }
+}
+
+/* ============================================================================
+ * CEL_Clay_Children Implementation
+ * ============================================================================
+ *
+ * Called from within layout functions via the CEL_Clay_Children() macro.
+ * Emits child entities at the current point in the CLAY tree, giving
+ * the developer control over WHERE children appear in the layout.
+ */
+
+void _cel_clay_emit_children(void) {
+    if (!g_layout_pass_active || g_layout_world == NULL) {
+        fprintf(stderr, "[cels-clay] CEL_Clay_Children() called outside layout pass\n");
+        return;
+    }
+    clay_walk_children(g_layout_world, g_layout_current_entity);
+}
+
+/* ============================================================================
+ * Render Command Storage
+ * ============================================================================
+ *
+ * After Clay_EndLayout(), render commands are stored for the render bridge
+ * (Phase 3) to consume. Accessible via _cel_clay_get_render_commands().
+ */
+
+Clay_RenderCommandArray _cel_clay_get_render_commands(void) {
+    return g_last_render_commands;
+}
+
+/* ============================================================================
+ * Layout System (PreStore phase)
+ * ============================================================================
+ *
+ * Runs each frame at PreStore phase. For each ClaySurface entity:
+ * 1. Set Clay layout dimensions from ClaySurfaceConfig
+ * 2. Reset frame arena for dynamic strings
+ * 3. Clay_BeginLayout()
+ * 4. Walk children of the surface entity (depth-first tree walk)
+ * 5. Clay_EndLayout() -> store render commands
+ *
+ * Uses ecs_iter_t* callback (direct flecs system, matching cels-ncurses pattern).
+ */
+
+static void ClayLayoutSystem_callback(ecs_iter_t* it) {
+    (void)it;
+
+    ecs_world_t* world = cels_get_world(cels_get_context());
+
+    /* Find ClaySurface entities by querying for ClaySurfaceConfig */
+    ecs_iter_t surface_it = ecs_each_id(world, ClaySurfaceConfigID);
+    while (ecs_each_next(&surface_it)) {
+        for (int i = 0; i < surface_it.count; i++) {
+            ecs_entity_t surface = surface_it.entities[i];
+            const ClaySurfaceConfig* config = (const ClaySurfaceConfig*)
+                ecs_get_id(world, surface, ClaySurfaceConfigID);
+            if (!config) continue;
+
+            /* 1. Set layout dimensions */
+            Clay_SetLayoutDimensions((Clay_Dimensions){
+                .width = config->width,
+                .height = config->height
+            });
+
+            /* 2. Reset frame arena for this pass */
+            _cel_clay_frame_arena_reset();
+
+            /* 3. Begin layout pass */
+            Clay_BeginLayout();
+            g_layout_world = world;
+            g_layout_pass_active = true;
+
+            /* 4. Walk children of the ClaySurface entity */
+            clay_walk_children(world, surface);
+
+            /* 5. End layout pass */
+            g_layout_pass_active = false;
+            g_layout_world = NULL;
+            g_layout_current_entity = 0;
+
+            g_last_render_commands = Clay_EndLayout();
+        }
+    }
+}
+
+/* ============================================================================
+ * System Registration
+ * ============================================================================
+ *
+ * Registers ClayLayoutSystem at PreStore phase using direct ecs_system_init.
+ * This matches the cels-ncurses pattern (tui_input.c, tui_frame.c) for
+ * standalone systems with zero component query terms.
+ */
+
 void _cel_clay_layout_system_register(void) {
-    /* Stub: layout system registration implemented in Plan 02 */
-    (void)_cel_clay_frame_arena_reset;
+    ecs_world_t* world = cels_get_world(cels_get_context());
+
+    ecs_system_desc_t sys_desc = {0};
+    ecs_entity_desc_t entity_desc = {0};
+    entity_desc.name = "ClayLayoutSystem";
+
+    /* Register at PreStore phase using flecs phase pairs */
+    ecs_id_t phase_ids[3] = {
+        ecs_pair(EcsDependsOn, EcsPreStore),
+        EcsPreStore,
+        0
+    };
+    entity_desc.add = phase_ids;
+
+    sys_desc.entity = ecs_entity_init(world, &entity_desc);
+    sys_desc.callback = ClayLayoutSystem_callback;
+
+    ecs_system_init(world, &sys_desc);
 }
