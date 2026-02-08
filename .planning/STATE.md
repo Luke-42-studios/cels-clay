@@ -5,34 +5,34 @@
 See: .planning/PROJECT.md (updated 2026-02-07)
 
 **Core value:** Declarative UI development where CELS handles application state and reactivity while Clay handles layout
-**Current focus:** Phase 2 - Layout System Core (Plan 1 of 3 complete)
+**Current focus:** Phase 2 - Layout System Core (Plan 2 of 3 complete)
 
 ## Current Position
 
 Phase: 2 of 5 (Layout System Core)
-Plan: 1 of 3 in current phase
+Plan: 2 of 3 in current phase
 Status: In progress
-Last activity: 2026-02-08 -- Completed 02-01-PLAN.md
+Last activity: 2026-02-08 -- Completed 02-02-PLAN.md
 
-Progress: [===.......] 25%
+Progress: [====......] 33%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3
-- Average duration: 2.3 min
-- Total execution time: 7 min
+- Total plans completed: 4
+- Average duration: 2.8 min
+- Total execution time: 11 min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 1 | 2 | 4 min | 2 min |
-| 2 | 1 | 3 min | 3 min |
+| 2 | 2 | 7 min | 3.5 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (2 min), 01-02 (2 min), 02-01 (3 min)
-- Trend: Consistent
+- Last 5 plans: 01-01 (2 min), 01-02 (2 min), 02-01 (3 min), 02-02 (4 min)
+- Trend: Slight increase (layout complexity growing)
 
 *Updated after each plan completion*
 
@@ -58,6 +58,9 @@ Recent decisions affecting current work:
 - [02-01]: Frame arena 16KB fixed, overflow to stderr, no dynamic growth
 - [02-01]: Forward-declared Clay__HashNumber (lacks CLAY_DLL_EXPORT but linker symbol exists from clay_impl.c)
 - [02-01]: Text measurement: 1 char = 1 unit width, newlines increment height (terminal cell model)
+- [02-02]: System callback uses ecs_iter_t* (flecs native) not CELS_Iter* -- direct flecs system requires flecs callback signature
+- [02-02]: Render commands stored in static global, returned by value via _cel_clay_get_render_commands
+- [02-02]: Layout cleanup called before Clay arena free in clay_cleanup (independent allocations, safe ordering)
 
 ### Pending Todos
 
@@ -66,10 +69,11 @@ None.
 ### Blockers/Concerns
 
 - cels-ncurses drawing primitives gap: PROJECT.md notes the planned graphics API is "not yet built." Phase 4 may need to build ncurses drawing helpers or work directly on stdscr.
+- No consumer target links to cels-clay yet -- runtime testing requires a consumer executable or test target
 
 ## Session Continuity
 
 Last session: 2026-02-08
-Stopped at: Completed 02-01-PLAN.md (clay_layout.h public API, clay_layout.c infrastructure, CMake update). Plan 1 of Phase 2 complete.
+Stopped at: Completed 02-02-PLAN.md (layout system tree walk, PreStore system, CEL_Clay_Children, module wiring). Plan 2 of Phase 2 complete.
 Resume file: None
 Key reference: .planning/API-DESIGN.md
