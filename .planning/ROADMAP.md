@@ -32,7 +32,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 2 plans
 
 Plans:
-- [ ] 01-01-PLAN.md -- CMake FetchContent + INTERFACE library setup (wave 1)
+- [x] 01-01-PLAN.md -- CMake FetchContent + INTERFACE library setup (wave 1)
 - [ ] 01-02-PLAN.md -- Clay initialization, arena management, error handler wiring (wave 2)
 
 ### Phase 2: Layout System Core
@@ -105,7 +105,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Build System + Clay Initialization | 0/2 | Planned | - |
+| 1. Build System + Clay Initialization | 1/2 | In progress | - |
 | 2. Layout System Core | 0/3 | Not started | - |
 | 3. Render Bridge + Module Definition | 0/2 | Not started | - |
 | 4. ncurses Clay Renderer | 0/3 | Not started | - |
@@ -113,4 +113,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 
 ---
 *Roadmap created: 2026-02-07*
-*Last updated: 2026-02-07*
+*Last updated: 2026-02-08*
