@@ -29,11 +29,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. The project compiles with Clay included in exactly one translation unit (no duplicate symbol errors)
   3. Clay arena is allocated and Clay_Initialize succeeds during module startup
   4. Clay errors (capacity exceeded, duplicate IDs) print visible messages to stderr
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 01-01: CMake FetchContent + INTERFACE library setup
-- [ ] 01-02: Clay initialization, arena management, error handler wiring
+- [ ] 01-01-PLAN.md -- CMake FetchContent + INTERFACE library setup (wave 1)
+- [ ] 01-02-PLAN.md -- Clay initialization, arena management, error handler wiring (wave 2)
 
 ### Phase 2: Layout System Core
 **Goal**: Developers can write CELS compositions that contribute CLAY() blocks to a single per-frame layout tree with correct nesting and ordering
@@ -105,7 +105,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Build System + Clay Initialization | 0/2 | Not started | - |
+| 1. Build System + Clay Initialization | 0/2 | Planned | - |
 | 2. Layout System Core | 0/3 | Not started | - |
 | 3. Render Bridge + Module Definition | 0/2 | Not started | - |
 | 4. ncurses Clay Renderer | 0/3 | Not started | - |
