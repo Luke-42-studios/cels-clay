@@ -8,7 +8,7 @@
  *   Clay_Engine_use(config) -- configure and initialize Clay
  *
  * The arena is allocated with at least Clay_MinMemorySize() bytes.
- * Consumer can override via Clay_EngineConfig.arena_size.
+ * Consumer can override via ClayEngineConfig.arena_size.
  *
  * NOTE: This file compiles in the CONSUMER's context (INTERFACE library).
  * NOTE: This file does NOT define CLAY_IMPLEMENTATION -- that's in clay_impl.c.
@@ -28,7 +28,7 @@
  * ============================================================================ */
 
 /* Module-level config (stored by Clay_Engine_use, read by init body) */
-static Clay_EngineConfig g_clay_config = {0};
+static ClayEngineConfig g_clay_config = {0};
 
 /* Original malloc pointer -- needed for free() because Clay aligns
  * arena.memory to a 64-byte cache-line boundary, so arena.memory != malloc result */
@@ -103,10 +103,13 @@ _CEL_DefineModule(Clay_Engine) {
     Clay_Arena arena = Clay_CreateArenaWithCapacityAndMemory(
         arena_size, g_clay_arena_memory);
 
-    /* 3. Initialize Clay */
+    /* 3. Initialize Clay with initial dimensions from config */
     g_clay_context = Clay_Initialize(
         arena,
-        (Clay_Dimensions){0, 0},
+        (Clay_Dimensions){
+            .width = g_clay_config.initial_width,
+            .height = g_clay_config.initial_height
+        },
         (Clay_ErrorHandler){ .errorHandlerFunction = clay_error_handler }
     );
 
@@ -130,7 +133,28 @@ _CEL_DefineModule(Clay_Engine) {
  * Public API
  * ============================================================================ */
 
-void Clay_Engine_use(Clay_EngineConfig config) {
-    g_clay_config = config;
+void Clay_Engine_use(const ClayEngineConfig* config) {
+    if (config) {
+        g_clay_config = *config;
+    }
     Clay_Engine_init();  /* idempotent via _CEL_DefineModule guard */
+}
+
+/* ============================================================================
+ * Composable Sub-Modules
+ * ============================================================================
+ *
+ * For advanced users who want individual subsystems without the full
+ * Clay_Engine_use(). NOTE: These do NOT allocate the Clay arena or call
+ * Clay_Initialize -- the caller is responsible for Clay setup.
+ */
+
+void clay_layout_use(void) {
+    _cel_clay_layout_init();
+    _cel_clay_layout_system_register();
+}
+
+void clay_render_use(void) {
+    _cel_clay_render_init();
+    _cel_clay_render_system_register();
 }
