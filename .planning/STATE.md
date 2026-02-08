@@ -5,32 +5,33 @@
 See: .planning/PROJECT.md (updated 2026-02-07)
 
 **Core value:** Declarative UI development where CELS handles application state and reactivity while Clay handles layout
-**Current focus:** Phase 1 complete. Next: Phase 2 - Layout System Core
+**Current focus:** Phase 2 - Layout System Core (Plan 1 of 3 complete)
 
 ## Current Position
 
-Phase: 1 of 5 (Build System + Clay Initialization) -- COMPLETE
-Plan: 2 of 2 in current phase
-Status: Phase complete
-Last activity: 2026-02-08 -- Completed 01-02-PLAN.md
+Phase: 2 of 5 (Layout System Core)
+Plan: 1 of 3 in current phase
+Status: In progress
+Last activity: 2026-02-08 -- Completed 02-01-PLAN.md
 
-Progress: [==........] 17%
+Progress: [===.......] 25%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 2
-- Average duration: 2 min
-- Total execution time: 4 min
+- Total plans completed: 3
+- Average duration: 2.3 min
+- Total execution time: 7 min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 1 | 2 | 4 min | 2 min |
+| 2 | 1 | 3 min | 3 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (2 min), 01-02 (2 min)
+- Last 5 plans: 01-01 (2 min), 01-02 (2 min), 02-01 (3 min)
 - Trend: Consistent
 
 *Updated after each plan completion*
@@ -52,6 +53,11 @@ Recent decisions affecting current work:
 - [01-02]: Arena size defaults to Clay_MinMemorySize() — no multiplier, consumer overrides via config
 - [01-02]: Store Clay_Context* for future multi-context support, unused in Phase 1
 - [01-02]: Free g_clay_arena_memory (original malloc ptr), NOT arena.memory (cache-line aligned offset)
+- [02-01]: Component named ClayUI (not ClayLayout) matching API-DESIGN.md and API-02
+- [02-01]: CEL_Clay uses __COUNTER__ (not __LINE__) for per-call-site uniqueness
+- [02-01]: Frame arena 16KB fixed, overflow to stderr, no dynamic growth
+- [02-01]: Forward-declared Clay__HashNumber (lacks CLAY_DLL_EXPORT but linker symbol exists from clay_impl.c)
+- [02-01]: Text measurement: 1 char = 1 unit width, newlines increment height (terminal cell model)
 
 ### Pending Todos
 
@@ -64,6 +70,6 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-08
-Stopped at: Completed 01-02-PLAN.md (Clay init, arena, error handler, CELS root integration). Phase 1 complete.
+Stopped at: Completed 02-01-PLAN.md (clay_layout.h public API, clay_layout.c infrastructure, CMake update). Plan 1 of Phase 2 complete.
 Resume file: None
 Key reference: .planning/API-DESIGN.md
