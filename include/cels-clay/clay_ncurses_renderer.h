@@ -40,6 +40,7 @@
 #define CELS_CLAY_NCURSES_RENDERER_H
 
 #include <stdbool.h>
+#include <cels/cels.h>
 
 /* ============================================================================
  * ClayNcursesTheme - Visual appearance configuration
@@ -123,5 +124,27 @@ extern void clay_ncurses_renderer_init(const ClayNcursesTheme* theme);
 /* Change the renderer theme at runtime. Pass NULL for default theme.
  * Re-initializes border character conversions. */
 extern void clay_ncurses_renderer_set_theme(const ClayNcursesTheme* theme);
+
+/* Process keyboard input for Clay scroll containers.
+ *
+ * Maps Vim-style key bindings to scroll deltas and feeds them to
+ * Clay_UpdateScrollContainers. Call this each frame BEFORE Clay_BeginLayout.
+ *
+ * Key bindings:
+ *   j / Down arrow    -> scroll down 1 line
+ *   k / Up arrow      -> scroll up 1 line
+ *   Ctrl-D / Page Down -> scroll down half page (12 lines)
+ *   Ctrl-U / Page Up   -> scroll up half page (12 lines)
+ *   G                  -> scroll to bottom (large positive delta)
+ *   gg                 -> scroll to top (large negative delta, requires two
+ *                         consecutive 'g' presses across frames)
+ *
+ * This is a plain function the app calls explicitly -- NOT an ECS system.
+ * The app controls which container receives scroll input (focus management).
+ *
+ * @param input     CELS_Input from the current frame (NULL-safe: sends zero delta)
+ * @param delta_time Time elapsed since last frame in seconds */
+extern void clay_ncurses_handle_scroll_input(const CELS_Input* input,
+                                             float delta_time);
 
 #endif /* CELS_CLAY_NCURSES_RENDERER_H */

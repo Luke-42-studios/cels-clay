@@ -332,6 +332,16 @@ static Clay_Dimensions clay_ncurses_measure_text(
 }
 
 /* ============================================================================
+ * Scroll Input State (REND-08)
+ * ============================================================================
+ *
+ * Tracks the previous frame's raw key for multi-key sequence detection (gg).
+ * Reset to 0 when no key is pressed in a frame.
+ */
+
+static int g_prev_raw_key = 0;
+
+/* ============================================================================
  * Public API
  * ============================================================================ */
 
@@ -347,4 +357,83 @@ void clay_ncurses_renderer_init(const ClayNcursesTheme* theme) {
 
 void clay_ncurses_renderer_set_theme(const ClayNcursesTheme* theme) {
     g_theme = theme ? theme : &CLAY_NCURSES_THEME_DEFAULT;
+}
+
+/* ============================================================================
+ * Scroll Input Handler (REND-08)
+ * ============================================================================
+ *
+ * Translates CELS_Input key events to Clay scroll deltas. Vim-style bindings
+ * are checked first via raw_key; CELS navigation keys (Page Up/Down, arrows)
+ * are fallbacks that only apply if no Vim key set a delta.
+ *
+ * Multi-key gg detection: when 'g' is pressed and the PREVIOUS frame also
+ * had 'g' as raw_key, this is the gg sequence (scroll to top). A single 'g'
+ * with no preceding 'g' does nothing (waits for the second keypress).
+ */
+
+void clay_ncurses_handle_scroll_input(const CELS_Input* input,
+                                      float delta_time) {
+    Clay_Vector2 scroll_delta = {0.0f, 0.0f};
+
+    if (input == NULL) {
+        Clay_UpdateScrollContainers(false, scroll_delta, delta_time);
+        return;
+    }
+
+    /* Phase 1: Vim key bindings (from raw_key) */
+    if (input->has_raw_key) {
+        switch (input->raw_key) {
+            case 'j':
+                scroll_delta.y = 1.0f;
+                break;
+            case 'k':
+                scroll_delta.y = -1.0f;
+                break;
+            case 4:   /* Ctrl-D (ASCII EOT) */
+                scroll_delta.y = 12.0f;
+                break;
+            case 21:  /* Ctrl-U (ASCII NAK) */
+                scroll_delta.y = -12.0f;
+                break;
+            case 'G':
+                scroll_delta.y = 10000.0f;   /* Large value, Clay clamps */
+                break;
+            case 'g':
+                if (g_prev_raw_key == 'g') {
+                    scroll_delta.y = -10000.0f;  /* gg: scroll to top */
+                }
+                /* Single g: no scroll (wait for second g) */
+                break;
+            default:
+                break;
+        }
+    }
+
+    /* Phase 2: CELS navigation keys (fallback if Vim key didn't fire) */
+    if (scroll_delta.y == 0.0f) {
+        if (input->key_page_down) {
+            scroll_delta.y = 12.0f;
+        } else if (input->key_page_up) {
+            scroll_delta.y = -12.0f;
+        }
+    }
+
+    /* Phase 3: Arrow keys via axis (fallback if nothing else fired) */
+    if (scroll_delta.y == 0.0f) {
+        if (input->axis_left[1] > 0.5f) {
+            scroll_delta.y = 1.0f;   /* Down */
+        } else if (input->axis_left[1] < -0.5f) {
+            scroll_delta.y = -1.0f;  /* Up */
+        }
+    }
+
+    /* Update prev_key state for multi-key sequence detection */
+    if (input->has_raw_key) {
+        g_prev_raw_key = input->raw_key;
+    } else {
+        g_prev_raw_key = 0;  /* Reset if no key this frame */
+    }
+
+    Clay_UpdateScrollContainers(false, scroll_delta, delta_time);
 }
