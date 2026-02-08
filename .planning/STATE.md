@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-07)
 
 **Core value:** Declarative UI development where CELS handles application state and reactivity while Clay handles layout
-**Current focus:** Phase 3 in progress. Plan 1 (Render Bridge) complete. Next: Plan 2 (Module Definition)
+**Current focus:** Phase 3 complete. Next: Phase 4 (ncurses Clay Renderer)
 
 ## Current Position
 
 Phase: 3 of 5 (Render Bridge + Module Definition)
-Plan: 1 of 2 in current phase
-Status: In progress
-Last activity: 2026-02-08 -- Completed 03-01-PLAN.md (Render Bridge)
+Plan: 2 of 2 in current phase
+Status: Phase complete
+Last activity: 2026-02-08 -- Completed 03-02-PLAN.md (Module Definition)
 
-Progress: [======....] 60%
+Progress: [=======...] 58%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 6
-- Average duration: 2.7 min
-- Total execution time: 16 min
+- Total plans completed: 7
+- Average duration: 2.6 min
+- Total execution time: 18 min
 
 **By Phase:**
 
@@ -29,11 +29,11 @@ Progress: [======....] 60%
 |-------|-------|-------|----------|
 | 1 | 2 | 4 min | 2 min |
 | 2 | 3 | 9 min | 3 min |
-| 3 | 1 | 3 min | 3 min |
+| 3 | 2 | 5 min | 2.5 min |
 
 **Recent Trend:**
-- Last 5 plans: 02-01 (3 min), 02-02 (4 min), 02-03 (2 min), 03-01 (3 min)
-- Trend: Stable around 2-4 min per plan
+- Last 5 plans: 02-02 (4 min), 02-03 (2 min), 03-01 (3 min), 03-02 (2 min)
+- Trend: Stable around 2-3 min per plan
 
 *Updated after each plan completion*
 
@@ -68,6 +68,10 @@ Recent decisions affecting current work:
 - [03-01]: dirty flag = (commands.length > 0) -- simple always-dirty approach, optimize later if needed
 - [03-01]: Render dispatch uses internal _cel_clay_get_render_commands/get_layout_dimensions, not public API
 - [03-01]: System registration order: layout (PreStore) then dispatch (OnStore), providers finalized lazily after
+- [03-02]: Renamed Clay_EngineConfig to ClayEngineConfig (consistent C naming without mixed underscore)
+- [03-02]: No error_handler in config -- internal handler sufficient, avoids Clay_ErrorData coupling
+- [03-02]: Composable wrappers skip arena -- caller responsible for Clay_Initialize when using individual pieces
+- [03-02]: NULL config to Clay_Engine_use means use all defaults (zero-initialized static config)
 
 ### Pending Todos
 
@@ -82,6 +86,6 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-08
-Stopped at: Completed 03-01-PLAN.md (Render Bridge). Next: 03-02 Module Definition.
+Stopped at: Completed 03-02-PLAN.md (Module Definition). Phase 3 complete. Next: Phase 4 (ncurses Clay Renderer).
 Resume file: None
 Key reference: .planning/API-DESIGN.md
