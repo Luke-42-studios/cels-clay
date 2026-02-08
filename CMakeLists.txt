@@ -43,6 +43,7 @@ add_library(cels::clay ALIAS cels-clay)
 target_sources(cels-clay INTERFACE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/clay_impl.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/clay_engine.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/clay_layout.c
 )
 
 target_include_directories(cels-clay INTERFACE
