@@ -130,7 +130,7 @@ CEL_Composition(ClaySurface, float width; float height;) {
  *   }
  */
 #define CEL_Clay(...) \
-    CLAY(_cel_clay_auto_id(__COUNTER__), __VA_ARGS__)
+    CLAY({ .id = _cel_clay_auto_id(__COUNTER__), __VA_ARGS__ })
 
 /* ============================================================================
  * CEL_Clay_Children()
