@@ -40,14 +40,14 @@
 
 ### ncurses Renderer
 
-- [ ] **REND-01**: Rectangle rendering (filled cells with background color via ncurses attributes)
-- [ ] **REND-02**: Text rendering via mvaddnstr (handles Clay's non-null-terminated StringSlice)
-- [ ] **REND-03**: Border rendering with Unicode box-drawing characters (single-line, corners, edges)
-- [ ] **REND-04**: Scissor/clipping support (scissor rect stack, bounds-check every cell write)
-- [ ] **REND-05**: Float-to-cell coordinate mapping using 1:1 cell-unit system (Clay units = terminal cells)
-- [ ] **REND-06**: Color mapping RGBA to ncurses color pairs (8/16 color nearest-match)
-- [ ] **REND-07**: Wide character text measurement (wcwidth/wcswidth for CJK/emoji correctness)
-- [ ] **REND-08**: Scroll container keyboard navigation (Page Up/Down, arrows mapped to Clay_UpdateScrollContainers)
+- [x] **REND-01**: Rectangle rendering (filled cells with background color via ncurses attributes)
+- [x] **REND-02**: Text rendering via mvaddnstr (handles Clay's non-null-terminated StringSlice)
+- [x] **REND-03**: Border rendering with Unicode box-drawing characters (single-line, corners, edges)
+- [x] **REND-04**: Scissor/clipping support (scissor rect stack, bounds-check every cell write)
+- [x] **REND-05**: Float-to-cell coordinate mapping using 1:1 cell-unit system (Clay units = terminal cells)
+- [x] **REND-06**: Color mapping RGBA to ncurses color pairs (8/16 color nearest-match)
+- [x] **REND-07**: Wide character text measurement (wcwidth/wcswidth for CJK/emoji correctness)
+- [x] **REND-08**: Scroll container keyboard navigation (Page Up/Down, arrows mapped to Clay_UpdateScrollContainers)
 
 ### Demo App
 
@@ -114,14 +114,14 @@
 | PIPE-03 | Phase 2 | Complete |
 | PIPE-04 | Phase 3 | Complete |
 | PIPE-05 | Phase 2 | Complete |
-| REND-01 | Phase 4 | Pending |
-| REND-02 | Phase 4 | Pending |
-| REND-03 | Phase 4 | Pending |
-| REND-04 | Phase 4 | Pending |
-| REND-05 | Phase 4 | Pending |
-| REND-06 | Phase 4 | Pending |
-| REND-07 | Phase 4 | Pending |
-| REND-08 | Phase 4 | Pending |
+| REND-01 | Phase 4 | Complete |
+| REND-02 | Phase 4 | Complete |
+| REND-03 | Phase 4 | Complete |
+| REND-04 | Phase 4 | Complete |
+| REND-05 | Phase 4 | Complete |
+| REND-06 | Phase 4 | Complete |
+| REND-07 | Phase 4 | Complete |
+| REND-08 | Phase 4 | Complete |
 | DEMO-01 | Phase 5 | Pending |
 | DEMO-02 | Phase 5 | Pending |
 | DEMO-03 | Phase 5 | Pending |
@@ -134,4 +134,4 @@
 
 ---
 *Requirements defined: 2026-02-07*
-*Last updated: 2026-02-08 after Phase 3 completion*
+*Last updated: 2026-02-08 after Phase 4 completion*
