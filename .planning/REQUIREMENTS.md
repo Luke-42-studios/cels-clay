@@ -17,26 +17,26 @@
 - [x] **CORE-01**: Clay arena initialized and managed through CELS lifecycle system
 - [ ] **CORE-02**: CEL_DefineModule(Clay_Engine) facade bundles layout + render systems
 - [x] **CORE-03**: Clay error handler wired to CELS logging (capacity exceeded, duplicate IDs surfaced visibly)
-- [ ] **CORE-04**: Terminal dimensions synced to Clay_SetLayoutDimensions each frame from window state
+- [x] **CORE-04**: Terminal dimensions synced to Clay_SetLayoutDimensions each frame from window state
 
 ### Developer API
 
-- [ ] **API-01**: CEL_Clay() scope macro opens entity-backed CLAY() scope inside compositions
-- [ ] **API-02**: ClayUI component with layout function pointer attached to entities
-- [ ] **API-03**: clay_emit_children() helper recursively walks child entities emitting their layout functions
-- [ ] **API-04**: Text measurement hook point for renderer backends (Clay_SetMeasureTextFunction bridge)
-- [ ] **API-05**: All Clay macros (CLAY, CLAY_TEXT, CLAY_ID, CLAY_IDI, CLAY_AUTO_ID, sizing/padding helpers) work as-is inside CEL_Clay blocks
+- [x] **API-01**: CEL_Clay() scope macro opens entity-backed CLAY() scope inside compositions
+- [x] **API-02**: ClayUI component with layout function pointer attached to entities
+- [x] **API-03**: clay_emit_children() helper recursively walks child entities emitting their layout functions
+- [x] **API-04**: Text measurement hook point for renderer backends (Clay_SetMeasureTextFunction bridge)
+- [x] **API-05**: All Clay macros (CLAY, CLAY_TEXT, CLAY_ID, CLAY_IDI, CLAY_AUTO_ID, sizing/padding helpers) work as-is inside CEL_Clay blocks
 - [ ] **API-06**: Cell-aware sizing helpers: CLAY_CELL_WIDTH(n), CLAY_CELL_HEIGHT(n), CLAY_CELL_PADDING(l,r,t,b)
-- [ ] **API-07**: Dynamic string helper macro for non-literal text from CELS state
-- [ ] **API-08**: Auto Clay ID generation from CELS composition context (prevent manual ID boilerplate)
+- [x] **API-07**: Dynamic string helper macro for non-literal text from CELS state
+- [x] **API-08**: Auto Clay ID generation from CELS composition context (prevent manual ID boilerplate)
 
 ### Rendering Pipeline
 
 - [ ] **PIPE-01**: ClayRenderable Feature defined by cels-clay module
 - [ ] **PIPE-02**: Provider callback pattern dispatches Clay_RenderCommandArray to registered backends
-- [ ] **PIPE-03**: Layout system runs at PreStore phase (after recomposition, before rendering)
+- [x] **PIPE-03**: Layout system runs at PreStore phase (after recomposition, before rendering)
 - [ ] **PIPE-04**: Render dispatch runs at OnRender phase (after layout complete)
-- [ ] **PIPE-05**: Entity tree walked in parent-before-child depth-first order for correct CLAY() nesting
+- [x] **PIPE-05**: Entity tree walked in parent-before-child depth-first order for correct CLAY() nesting
 
 ### ncurses Renderer
 
@@ -100,20 +100,20 @@
 | CORE-01 | Phase 1 | Complete |
 | CORE-02 | Phase 3 | Pending |
 | CORE-03 | Phase 1 | Complete |
-| CORE-04 | Phase 2 | Pending |
-| API-01 | Phase 2 | Pending |
-| API-02 | Phase 2 | Pending |
-| API-03 | Phase 2 | Pending |
-| API-04 | Phase 2 | Pending |
-| API-05 | Phase 2 | Pending |
+| CORE-04 | Phase 2 | Complete |
+| API-01 | Phase 2 | Complete |
+| API-02 | Phase 2 | Complete |
+| API-03 | Phase 2 | Complete |
+| API-04 | Phase 2 | Complete |
+| API-05 | Phase 2 | Complete |
 | API-06 | Phase 2 | Pending |
-| API-07 | Phase 2 | Pending |
-| API-08 | Phase 2 | Pending |
+| API-07 | Phase 2 | Complete |
+| API-08 | Phase 2 | Complete |
 | PIPE-01 | Phase 3 | Pending |
 | PIPE-02 | Phase 3 | Pending |
-| PIPE-03 | Phase 2 | Pending |
+| PIPE-03 | Phase 2 | Complete |
 | PIPE-04 | Phase 3 | Pending |
-| PIPE-05 | Phase 2 | Pending |
+| PIPE-05 | Phase 2 | Complete |
 | REND-01 | Phase 4 | Pending |
 | REND-02 | Phase 4 | Pending |
 | REND-03 | Phase 4 | Pending |
@@ -134,4 +134,4 @@
 
 ---
 *Requirements defined: 2026-02-07*
-*Last updated: 2026-02-08 after Phase 1 completion*
+*Last updated: 2026-02-08 after Phase 2 completion*

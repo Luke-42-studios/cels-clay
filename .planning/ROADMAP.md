@@ -13,7 +13,7 @@ cels-clay integrates the Clay layout engine into the CELS declarative ECS framew
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Build System + Clay Initialization** - CMake integration, Clay fetch, arena setup, error handler
-- [ ] **Phase 2: Layout System Core** - CEL_Clay() macro, entity tree walking, layout pipeline, developer API
+- [x] **Phase 2: Layout System Core** - CEL_Clay() macro, entity tree walking, layout pipeline, developer API
 - [ ] **Phase 3: Render Bridge + Module Definition** - ClayRenderable Feature, Provider dispatch, module facade
 - [ ] **Phase 4: ncurses Clay Renderer** - Terminal render commands: rectangles, text, borders, clipping, color
 - [ ] **Phase 5: Demo App + Integration** - Sidebar + content layout, end-to-end CELS + Clay + ncurses
@@ -48,9 +48,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 02-01-PLAN.md -- Public header, types, frame arena, text measurement, auto-ID infrastructure (wave 1)
-- [ ] 02-02-PLAN.md -- Layout system (PreStore), entity tree walk, BeginLayout/EndLayout, module wiring (wave 2)
-- [ ] 02-03-PLAN.md -- ClaySurface composition, compile validation, phase success criteria verification (wave 3)
+- [x] 02-01-PLAN.md -- Public header, types, frame arena, text measurement, auto-ID infrastructure (wave 1)
+- [x] 02-02-PLAN.md -- Layout system (PreStore), entity tree walk, BeginLayout/EndLayout, module wiring (wave 2)
+- [x] 02-03-PLAN.md -- ClaySurface composition, compile validation, phase success criteria verification (wave 3)
 
 ### Phase 3: Render Bridge + Module Definition
 **Goal**: Layout results are exposed to renderer backends through the CELS Feature/Provider pattern, and the module has a clean single-call initialization
@@ -106,11 +106,11 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Build System + Clay Initialization | 2/2 | Complete | 2026-02-08 |
-| 2. Layout System Core | 0/3 | Planned | - |
+| 2. Layout System Core | 3/3 | Complete | 2026-02-08 |
 | 3. Render Bridge + Module Definition | 0/2 | Not started | - |
 | 4. ncurses Clay Renderer | 0/3 | Not started | - |
 | 5. Demo App + Integration | 0/2 | Not started | - |
 
 ---
 *Roadmap created: 2026-02-07*
-*Last updated: 2026-02-08 after Phase 2 planning*
+*Last updated: 2026-02-08 after Phase 2 execution*
