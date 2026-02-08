@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-07)
 
 **Core value:** Declarative UI development where CELS handles application state and reactivity while Clay handles layout
-**Current focus:** Phase 4 plan 1 complete. Next: Phase 4 plan 2 (scroll navigation)
+**Current focus:** Phase 4 complete. Next: Phase 5 (demo app + integration)
 
 ## Current Position
 
-Phase: 4 of 5 (ncurses Clay Renderer) -- In progress
-Plan: 1 of 2 in current phase
-Status: In progress
-Last activity: 2026-02-08 -- Completed 04-01-PLAN.md (ncurses renderer core)
+Phase: 4 of 5 (ncurses Clay Renderer) -- Complete
+Plan: 2 of 2 in current phase
+Status: Phase complete
+Last activity: 2026-02-08 -- Completed 04-02-PLAN.md (scroll navigation)
 
-Progress: [========..] 73%
+Progress: [=========.] 82%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 8
-- Average duration: 2.8 min
-- Total execution time: 22 min
+- Total plans completed: 9
+- Average duration: 2.6 min
+- Total execution time: 23 min
 
 **By Phase:**
 
@@ -30,11 +30,11 @@ Progress: [========..] 73%
 | 1 | 2 | 4 min | 2 min |
 | 2 | 3 | 9 min | 3 min |
 | 3 | 2 | 5 min | 2.5 min |
-| 4 | 1 | 4 min | 4 min |
+| 4 | 2 | 5 min | 2.5 min |
 
 **Recent Trend:**
-- Last 5 plans: 02-03 (2 min), 03-01 (3 min), 03-02 (2 min), 04-01 (4 min)
-- Trend: Stable 2-4 min per plan
+- Last 5 plans: 03-01 (3 min), 03-02 (2 min), 04-01 (4 min), 04-02 (1 min)
+- Trend: Stable 1-4 min per plan
 
 *Updated after each plan completion*
 
@@ -78,6 +78,9 @@ Recent decisions affecting current work:
 - [04-01]: Text x-position still aspect-scaled even for text bbox -- only width is unscaled
 - [04-01]: Omitted init_theme_border_chars cchar_t conversion -- not needed with TUI_BORDER_SINGLE
 - [04-01]: Stack buffer 512 bytes for StringSlice null-termination, malloc fallback for long strings
+- [04-02]: Scroll handler is app-callable plain function, not ECS system -- app controls focus
+- [04-02]: Priority fallback: Vim raw_key first, then CELS nav keys, then axis -- prevents double-scrolling
+- [04-02]: gg uses cross-frame static state (g_prev_raw_key) -- second g in consecutive frames triggers scroll-to-top
 
 ### Pending Todos
 
@@ -87,11 +90,10 @@ None.
 
 - No consumer target links to cels-clay yet -- runtime testing requires a consumer executable or test target
 - CELS test suite (test_cels) has pre-existing compilation failures from v0.2 API changes (CEL_Call -> CEL_Init) -- unrelated to cels-clay
-- cels-ncurses drawing primitives blocker RESOLVED: Phase 4 plan 1 confirmed all needed tui_draw_* APIs exist
 
 ## Session Continuity
 
 Last session: 2026-02-08
-Stopped at: Completed 04-01-PLAN.md. Next: 04-02-PLAN.md (scroll navigation).
+Stopped at: Completed 04-02-PLAN.md. Phase 4 complete. Next: Phase 5 (demo app + integration).
 Resume file: None
 Key reference: .planning/API-DESIGN.md
