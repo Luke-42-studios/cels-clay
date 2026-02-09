@@ -1,7 +1,0 @@
-{
-	"InstallScripts" : 
-	[
-		"/home/cachy/workspaces/libs/cels/modules/cels-clay/build/_deps/clay-subbuild/cmake_install.cmake"
-	],
-	"Parallel" : false
-}
