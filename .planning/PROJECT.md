@@ -16,8 +16,11 @@ Declarative UI development where CELS handles application state and reactivity w
 
 ### Active
 
-- [ ] CEL_Clay() macro that opens a Clay scope inside a CELS composition
-- [ ] Entity-backed Clay blocks (ECS tracks which compositions have Clay UI)
+- [ ] ClayUI component with layout function pointer (CEL_Has(ClayUI, .layout = fn))
+- [ ] CEL_Clay_Layout() macro for defining layout functions
+- [ ] Clay_Get() helper macro for reading entity components in layout functions
+- [ ] CEL_Clay_Children() helper for recursive child entity layout emission
+- [ ] Entity-backed Clay layout (ClayUI component marks entities for tree participation)
 - [ ] One global Clay tree per frame (all active compositions contribute)
 - [ ] Full rebuild each frame (immediate-mode — CELS reactivity controls which compositions run, Clay re-layouts what's declared)
 - [ ] Clay initialization and arena management owned by cels-clay module
@@ -62,10 +65,12 @@ Declarative UI development where CELS handles application state and reactivity w
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Hybrid API (CELS + CLAY() macros) | Leverages Clay's battle-tested layout DSL directly while CELS handles state/reactivity/lifecycle — avoids re-inventing Clay's API | — Pending |
-| One global Clay tree per frame | All compositions contribute to single layout tree — Clay sees whole UI for correct layout math | — Pending |
-| Full rebuild each frame | Clay is immediate-mode by design. CELS reactivity controls which compositions are active, not incremental layout updates | — Pending |
-| Entity-backed Clay blocks | ECS tracks which compositions have Clay UI — enables query-based rendering order and system integration | — Pending |
+| Clay as component model | ClayUI component with layout fn pointer on entities. One module system walks tree. See .planning/API-DESIGN.md | Agreed |
+| One global Clay tree per frame | All compositions contribute to single layout tree — Clay sees whole UI for correct layout math | Agreed |
+| Full rebuild each frame | Clay is immediate-mode by design. CELS reactivity controls which compositions are active, not incremental layout updates | Agreed |
+| Entity-backed Clay layout | ClayUI component marks entities for layout participation — layout system queries these during tree walk | Agreed |
+| Separated layout functions | C99 has no closures — layout functions defined outside compositions, read entity components via Clay_Get() | Agreed |
+| Input via CEL_Use systems | Per-composition input systems run at OnUpdate, mutate state via CEL_Update, trigger reactive recomposition | Agreed |
 | Provider callback for rendering | Follows existing CELS Feature/Provider pattern (same as cels-ncurses). Clean contract between layout and rendering | — Pending |
 | Sibling module architecture | cels-clay and cels-ncurses have no cross-deps. App wires them together. Keeps dependency tree clean | — Pending |
 | Build ncurses primitives first | Correct layering: Clay renderer uses cels-ncurses abstractions, not raw ncurses calls | — Pending |

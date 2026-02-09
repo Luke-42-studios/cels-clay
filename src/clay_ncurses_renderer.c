@@ -129,8 +129,31 @@ static void render_rectangle(TUI_DrawContext* ctx, TUI_CellRect rect,
  * passing to tui_draw_text which expects const char*.
  */
 
+/* Find the background color of the nearest parent RECTANGLE that contains
+ * the given bounding box. Clay emits commands depth-first: a parent's
+ * RECTANGLE always precedes its children's TEXT commands. Scanning backwards
+ * from the TEXT index, the first containing RECTANGLE is the innermost parent. */
+static Clay_Color find_parent_bg(Clay_RenderCommandArray cmds, int32_t text_idx) {
+    Clay_BoundingBox tb = Clay_RenderCommandArray_Get(&cmds, text_idx)->boundingBox;
+
+    for (int32_t j = text_idx - 1; j >= 0; j--) {
+        Clay_RenderCommand* prev = Clay_RenderCommandArray_Get(&cmds, j);
+        if (prev->commandType != CLAY_RENDER_COMMAND_TYPE_RECTANGLE) continue;
+
+        Clay_BoundingBox rb = prev->boundingBox;
+        if (rb.x <= tb.x && rb.y <= tb.y &&
+            rb.x + rb.width >= tb.x + tb.width &&
+            rb.y + rb.height >= tb.y + tb.height) {
+            return prev->renderData.rectangle.backgroundColor;
+        }
+    }
+
+    return (Clay_Color){0, 0, 0, 255};
+}
+
 static void render_text(TUI_DrawContext* ctx, TUI_CellRect rect,
-                         Clay_TextRenderData* data) {
+                         Clay_TextRenderData* data,
+                         Clay_Color parent_bg) {
     Clay_StringSlice text = data->stringContents;
     if (text.length <= 0 || text.chars == NULL) return;
 
@@ -147,7 +170,8 @@ static void render_text(TUI_DrawContext* ctx, TUI_CellRect rect,
     Clay_Color c = data->textColor;
     TUI_Style style = {
         .fg = tui_color_rgb((uint8_t)c.r, (uint8_t)c.g, (uint8_t)c.b),
-        .bg = TUI_COLOR_DEFAULT,
+        .bg = tui_color_rgb((uint8_t)parent_bg.r, (uint8_t)parent_bg.g,
+                            (uint8_t)parent_bg.b),
         .attrs = TUI_ATTR_NORMAL,
     };
 
@@ -220,6 +244,22 @@ static void clay_ncurses_render(CELS_Iter* it) {
         tui_scissor_reset(&ctx);
 
         Clay_RenderCommandArray cmds = data->render_commands;
+        {
+            static int32_t prev_len = 0;
+            if (cmds.length != prev_len) {
+                fprintf(stderr, "[renderer] cmd count: %d -> %d\n", prev_len, cmds.length);
+                if (cmds.length <= 10) {
+                    for (int32_t d = 0; d < cmds.length; d++) {
+                        Clay_RenderCommand* dc = Clay_RenderCommandArray_Get(&cmds, d);
+                        fprintf(stderr, "  cmd[%d] type=%d bbox=(%.0f,%.0f %.0fx%.0f)\n",
+                                d, dc->commandType,
+                                dc->boundingBox.x, dc->boundingBox.y,
+                                dc->boundingBox.width, dc->boundingBox.height);
+                    }
+                }
+                prev_len = cmds.length;
+            }
+        }
         for (int32_t j = 0; j < cmds.length; j++) {
             Clay_RenderCommand* cmd = Clay_RenderCommandArray_Get(&cmds, j);
 
@@ -232,7 +272,8 @@ static void clay_ncurses_render(CELS_Iter* it) {
                 case CLAY_RENDER_COMMAND_TYPE_TEXT: {
                     /* Text bounding boxes are NOT aspect-ratio-scaled */
                     TUI_CellRect cell_rect = clay_text_bbox_to_cells(cmd->boundingBox);
-                    render_text(&ctx, cell_rect, &cmd->renderData.text);
+                    Clay_Color parent_bg = find_parent_bg(cmds, j);
+                    render_text(&ctx, cell_rect, &cmd->renderData.text, parent_bg);
                     break;
                 }
                 case CLAY_RENDER_COMMAND_TYPE_BORDER: {

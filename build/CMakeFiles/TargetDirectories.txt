@@ -1,0 +1,2 @@
+/home/cachy/workspaces/libs/cels/modules/cels-clay/build/CMakeFiles/edit_cache.dir
+/home/cachy/workspaces/libs/cels/modules/cels-clay/build/CMakeFiles/rebuild_cache.dir

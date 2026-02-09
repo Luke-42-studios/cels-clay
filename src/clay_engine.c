@@ -83,7 +83,12 @@ static void clay_cleanup(void) {
  * ============================================================================ */
 
 _CEL_DefineModule(Clay_Engine) {
-    /* 1. Calculate arena size */
+    /* 1. Set generous element/text cache limits BEFORE Clay_MinMemorySize().
+     * Default is too small for terminal apps with long text at wide widths. */
+    Clay_SetMaxElementCount(8192);
+    Clay_SetMaxMeasureTextCacheWordCount(16384);
+
+    /* 2. Calculate arena size (now reflects the higher limits) */
     uint32_t min_memory = Clay_MinMemorySize();
     uint32_t arena_size = min_memory;
 
@@ -98,12 +103,12 @@ _CEL_DefineModule(Clay_Engine) {
         }
     }
 
-    /* 2. Allocate arena memory */
+    /* 3. Allocate arena memory */
     g_clay_arena_memory = malloc(arena_size);
     Clay_Arena arena = Clay_CreateArenaWithCapacityAndMemory(
         arena_size, g_clay_arena_memory);
 
-    /* 3. Initialize Clay with initial dimensions from config */
+    /* 4. Initialize Clay with initial dimensions from config */
     g_clay_context = Clay_Initialize(
         arena,
         (Clay_Dimensions){
