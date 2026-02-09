@@ -35,10 +35,42 @@
 #include <cels-ncurses/tui_frame.h>
 #include <cels-ncurses/tui_layer.h>
 
+#include <cels-layout/types.h>   /* CEL_TextAttr */
+
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
 #include <wchar.h>
+
+/* ============================================================================
+ * Text Attribute Helpers
+ * ============================================================================
+ *
+ * Decode CEL_TextAttr from a void* pointer (packed by w_pack_text_attr in
+ * cels-widgets/style.h). Each bool occupies one bit of the pointer value.
+ * Convert to TUI_ATTR_* bitmask for the ncurses style system.
+ */
+
+static inline CEL_TextAttr _unpack_text_attr(void* userData) {
+    uintptr_t packed = (uintptr_t)userData;
+    return (CEL_TextAttr){
+        .bold      = (packed & 0x01) != 0,
+        .dim       = (packed & 0x02) != 0,
+        .underline = (packed & 0x04) != 0,
+        .reverse   = (packed & 0x08) != 0,
+        .italic    = (packed & 0x10) != 0,
+    };
+}
+
+static inline uint32_t _text_attr_to_tui(CEL_TextAttr a) {
+    uint32_t flags = TUI_ATTR_NORMAL;
+    if (a.bold)      flags |= TUI_ATTR_BOLD;
+    if (a.dim)       flags |= TUI_ATTR_DIM;
+    if (a.underline) flags |= TUI_ATTR_UNDERLINE;
+    if (a.reverse)   flags |= TUI_ATTR_REVERSE;
+    if (a.italic)    flags |= TUI_ATTR_ITALIC;
+    return flags;
+}
 
 /* ============================================================================
  * Static State
@@ -148,12 +180,13 @@ static Clay_Color find_parent_bg(Clay_RenderCommandArray cmds, int32_t text_idx)
         }
     }
 
-    return (Clay_Color){0, 0, 0, 255};
+    return (Clay_Color){0, 0, 0, 0};  /* alpha=0: no parent bg found */
 }
 
 static void render_text(TUI_DrawContext* ctx, TUI_CellRect rect,
                          Clay_TextRenderData* data,
-                         Clay_Color parent_bg) {
+                         Clay_Color parent_bg,
+                         void* userData) {
     Clay_StringSlice text = data->stringContents;
     if (text.length <= 0 || text.chars == NULL) return;
 
@@ -168,11 +201,22 @@ static void render_text(TUI_DrawContext* ctx, TUI_CellRect rect,
     buf[text.length] = '\0';
 
     Clay_Color c = data->textColor;
+    TUI_Color bg = (parent_bg.a > 0)
+        ? tui_color_rgb((uint8_t)parent_bg.r, (uint8_t)parent_bg.g,
+                        (uint8_t)parent_bg.b)
+        : TUI_COLOR_DEFAULT;
+
+    /* Decode text attributes from userData (packed by w_pack_text_attr) */
+    uint32_t attrs = TUI_ATTR_NORMAL;
+    if (userData) {
+        CEL_TextAttr ta = _unpack_text_attr(userData);
+        attrs = _text_attr_to_tui(ta);
+    }
+
     TUI_Style style = {
         .fg = tui_color_rgb((uint8_t)c.r, (uint8_t)c.g, (uint8_t)c.b),
-        .bg = tui_color_rgb((uint8_t)parent_bg.r, (uint8_t)parent_bg.g,
-                            (uint8_t)parent_bg.b),
-        .attrs = TUI_ATTR_NORMAL,
+        .bg = bg,
+        .attrs = attrs,
     };
 
     tui_draw_text(ctx, rect.x, rect.y, buf, style);
@@ -194,7 +238,8 @@ static void render_text(TUI_DrawContext* ctx, TUI_CellRect rect,
  */
 
 static void render_border(TUI_DrawContext* ctx, TUI_CellRect rect,
-                           Clay_BorderRenderData* data) {
+                           Clay_BorderRenderData* data,
+                           Clay_Color parent_bg) {
     /* Build per-side mask from Clay border widths */
     uint8_t sides = 0;
     if (data->width.top > 0)    sides |= TUI_SIDE_TOP;
@@ -204,14 +249,38 @@ static void render_border(TUI_DrawContext* ctx, TUI_CellRect rect,
 
     if (sides == 0) return;
 
-    /* Use theme border style, not Clay color */
+    /* Use Clay border color when provided, else terminal default */
+    Clay_Color c = data->color;
+    TUI_Color fg = (c.r || c.g || c.b || c.a)
+        ? tui_color_rgb((uint8_t)c.r, (uint8_t)c.g, (uint8_t)c.b)
+        : TUI_COLOR_DEFAULT;
+
+    /* Use parent rectangle's bg so border chars blend with the fill */
+    TUI_Color bg = (parent_bg.a > 0)
+        ? tui_color_rgb((uint8_t)parent_bg.r, (uint8_t)parent_bg.g,
+                        (uint8_t)parent_bg.b)
+        : TUI_COLOR_DEFAULT;
+
     TUI_Style style = {
-        .fg = TUI_COLOR_DEFAULT,
-        .bg = TUI_COLOR_DEFAULT,
+        .fg = fg,
+        .bg = bg,
         .attrs = TUI_ATTR_NORMAL,
     };
 
-    tui_draw_border(ctx, rect, sides, TUI_BORDER_SINGLE, style);
+    /* Map Clay properties to TUI border style:
+     * - cornerRadius > 0 → rounded
+     * - any borderWidth >= 2 → double
+     * - else → single (default) */
+    TUI_BorderStyle border_style = TUI_BORDER_SINGLE;
+    if (data->cornerRadius.topLeft > 0 || data->cornerRadius.topRight > 0 ||
+        data->cornerRadius.bottomLeft > 0 || data->cornerRadius.bottomRight > 0) {
+        border_style = TUI_BORDER_ROUNDED;
+    } else if (data->width.top >= 2 || data->width.right >= 2 ||
+               data->width.bottom >= 2 || data->width.left >= 2) {
+        border_style = TUI_BORDER_DOUBLE;
+    }
+
+    tui_draw_border(ctx, rect, sides, border_style, style);
 }
 
 /* ============================================================================
@@ -244,22 +313,6 @@ static void clay_ncurses_render(CELS_Iter* it) {
         tui_scissor_reset(&ctx);
 
         Clay_RenderCommandArray cmds = data->render_commands;
-        {
-            static int32_t prev_len = 0;
-            if (cmds.length != prev_len) {
-                fprintf(stderr, "[renderer] cmd count: %d -> %d\n", prev_len, cmds.length);
-                if (cmds.length <= 10) {
-                    for (int32_t d = 0; d < cmds.length; d++) {
-                        Clay_RenderCommand* dc = Clay_RenderCommandArray_Get(&cmds, d);
-                        fprintf(stderr, "  cmd[%d] type=%d bbox=(%.0f,%.0f %.0fx%.0f)\n",
-                                d, dc->commandType,
-                                dc->boundingBox.x, dc->boundingBox.y,
-                                dc->boundingBox.width, dc->boundingBox.height);
-                    }
-                }
-                prev_len = cmds.length;
-            }
-        }
         for (int32_t j = 0; j < cmds.length; j++) {
             Clay_RenderCommand* cmd = Clay_RenderCommandArray_Get(&cmds, j);
 
@@ -273,12 +326,15 @@ static void clay_ncurses_render(CELS_Iter* it) {
                     /* Text bounding boxes are NOT aspect-ratio-scaled */
                     TUI_CellRect cell_rect = clay_text_bbox_to_cells(cmd->boundingBox);
                     Clay_Color parent_bg = find_parent_bg(cmds, j);
-                    render_text(&ctx, cell_rect, &cmd->renderData.text, parent_bg);
+                    render_text(&ctx, cell_rect, &cmd->renderData.text,
+                                parent_bg, cmd->userData);
                     break;
                 }
                 case CLAY_RENDER_COMMAND_TYPE_BORDER: {
                     TUI_CellRect cell_rect = clay_bbox_to_cells(cmd->boundingBox);
-                    render_border(&ctx, cell_rect, &cmd->renderData.border);
+                    Clay_Color border_parent_bg = find_parent_bg(cmds, j);
+                    render_border(&ctx, cell_rect, &cmd->renderData.border,
+                                  border_parent_bg);
                     break;
                 }
                 case CLAY_RENDER_COMMAND_TYPE_SCISSOR_START: {
@@ -339,7 +395,7 @@ static Clay_Dimensions clay_ncurses_measure_text(
     if (needed == (size_t)-1) {
         /* Fallback: count bytes as columns */
         if (buf != buf_stack) free(buf);
-        return (Clay_Dimensions){ .width = (float)text.length, .height = 1 };
+        return (Clay_Dimensions){ .width = (float)text.length / g_theme->cell_aspect_ratio, .height = 1 };
     }
     if (needed >= 256) {
         wbuf = (wchar_t*)malloc((needed + 1) * sizeof(wchar_t));
@@ -371,7 +427,12 @@ static Clay_Dimensions clay_ncurses_measure_text(
     if (wbuf != wbuf_stack) free(wbuf);
     if (buf != buf_stack) free(buf);
 
-    return (Clay_Dimensions){ .width = max_width, .height = height };
+    /* Return width in Clay units (divide by aspect ratio).
+     * Text measurement in cell columns is terminal-accurate, but Clay's
+     * coordinate space is pre-divided by AR (ClaySurface width = terminal/AR).
+     * Without this division, Clay over-allocates space for text and centering
+     * calculations produce misaligned results in terminal rendering. */
+    return (Clay_Dimensions){ .width = max_width / g_theme->cell_aspect_ratio, .height = height };
 }
 
 /* ============================================================================
@@ -394,8 +455,8 @@ void clay_ncurses_renderer_init(const ClayNcursesTheme* theme) {
     /* Register text measurement callback */
     Clay_SetMeasureTextFunction(clay_ncurses_measure_text, NULL);
 
-    /* Register as ClayRenderable provider */
-    _CEL_Provides(NCurses, ClayRenderable, ClayRenderableData, clay_ncurses_render);
+    /* Register as ClayRenderable provider (backend name must match TUI_Engine's "TUI") */
+    _CEL_Provides(TUI, ClayRenderable, ClayRenderableData, clay_ncurses_render);
 }
 
 void clay_ncurses_renderer_set_theme(const ClayNcursesTheme* theme) {
