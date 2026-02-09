@@ -174,10 +174,6 @@ CEL_System(DemoInputSystem, .phase = CELS_Phase_OnUpdate) {
 CEL_Root(AppUI, TUI_EngineContext) {
     TUI_WindowState_t* win = CEL_WatchId(ctx.windowState, TUI_WindowState_t);
 
-    fprintf(stderr, "[AppUI] recompose: %dx%d state=%d\n",
-            win ? win->width : -1, win ? win->height : -1,
-            win ? win->state : -1);
-
     if (win->state == WINDOW_STATE_READY) {
         ClaySurface(.width = (float)win->width / 2.0f,
                     .height = (float)win->height) {
