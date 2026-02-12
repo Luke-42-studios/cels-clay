@@ -78,6 +78,9 @@ static inline uint32_t _text_attr_to_tui(CEL_TextAttr a) {
 
 static const ClayNcursesTheme* g_theme = &CLAY_NCURSES_THEME_DEFAULT;
 
+/* Overlay layer for z-indexed elements (popups, modals, toasts) */
+static TUI_Layer* g_overlay_layer = NULL;
+
 /* ============================================================================
  * Coordinate Mapping
  * ============================================================================
@@ -125,6 +128,25 @@ static TUI_CellRect clay_text_bbox_to_cells(Clay_BoundingBox bbox) {
     if (bbox.height > 0 && ch < 1) ch = 1;
 
     return (TUI_CellRect){ .x = cx, .y = cy, .w = cw, .h = ch };
+}
+
+/* ============================================================================
+ * Overlay Layer Management
+ * ============================================================================
+ *
+ * Lazily creates a full-screen overlay layer above the background layer.
+ * The overlay layer renders Clay commands with zIndex > 0 (popups, modals,
+ * toasts). Hidden when no overlay commands exist to avoid stale content.
+ */
+
+static TUI_Layer* get_or_create_overlay_layer(void) {
+    if (!g_overlay_layer) {
+        g_overlay_layer = tui_layer_create("overlay", 0, 0, COLS, LINES);
+        if (g_overlay_layer) {
+            tui_layer_raise(g_overlay_layer);
+        }
+    }
+    return g_overlay_layer;
 }
 
 /* ============================================================================
@@ -305,45 +327,89 @@ static void clay_ncurses_render(CELS_Iter* it) {
         if (!data->dirty) continue;
 
         /* Get background layer and draw context */
-        TUI_Layer* layer = tui_frame_get_background();
-        if (!layer) continue;
-        TUI_DrawContext ctx = tui_layer_get_draw_context(layer);
+        TUI_Layer* bg_layer = tui_frame_get_background();
+        if (!bg_layer) continue;
+        TUI_DrawContext bg_ctx = tui_layer_get_draw_context(bg_layer);
 
-        /* Reset scissor stack for this frame */
-        tui_scissor_reset(&ctx);
+        /* Reset scissor stack for background */
+        tui_scissor_reset(&bg_ctx);
 
         Clay_RenderCommandArray cmds = data->render_commands;
+
+        /* First pass: check if any commands have zIndex > 0 */
+        bool has_overlay_commands = false;
         for (int32_t j = 0; j < cmds.length; j++) {
             Clay_RenderCommand* cmd = Clay_RenderCommandArray_Get(&cmds, j);
+            if (cmd->zIndex > 0) {
+                has_overlay_commands = true;
+                break;
+            }
+        }
+
+        /* Manage overlay layer visibility */
+        TUI_DrawContext overlay_ctx = {0};
+        if (has_overlay_commands) {
+            TUI_Layer* ol = get_or_create_overlay_layer();
+            if (ol) {
+                /* Resize overlay if terminal dimensions changed */
+                if (ol->width != COLS || ol->height != LINES) {
+                    tui_layer_resize(ol, COLS, LINES);
+                }
+                tui_layer_show(ol);
+                werase(ol->win);
+                overlay_ctx = tui_layer_get_draw_context(ol);
+                tui_scissor_reset(&overlay_ctx);
+            }
+        } else if (g_overlay_layer) {
+            tui_layer_hide(g_overlay_layer);
+        }
+
+        /* Render pass: route commands by zIndex */
+        bool using_overlay = false;
+        TUI_DrawContext* ctx = &bg_ctx;
+
+        for (int32_t j = 0; j < cmds.length; j++) {
+            Clay_RenderCommand* cmd = Clay_RenderCommandArray_Get(&cmds, j);
+
+            /* Switch draw context based on zIndex */
+            if (cmd->zIndex > 0 && !using_overlay && has_overlay_commands) {
+                ctx = &overlay_ctx;
+                tui_scissor_reset(ctx);
+                using_overlay = true;
+            } else if (cmd->zIndex == 0 && using_overlay) {
+                ctx = &bg_ctx;
+                tui_scissor_reset(ctx);
+                using_overlay = false;
+            }
 
             switch (cmd->commandType) {
                 case CLAY_RENDER_COMMAND_TYPE_RECTANGLE: {
                     TUI_CellRect cell_rect = clay_bbox_to_cells(cmd->boundingBox);
-                    render_rectangle(&ctx, cell_rect, &cmd->renderData.rectangle);
+                    render_rectangle(ctx, cell_rect, &cmd->renderData.rectangle);
                     break;
                 }
                 case CLAY_RENDER_COMMAND_TYPE_TEXT: {
                     /* Text bounding boxes are NOT aspect-ratio-scaled */
                     TUI_CellRect cell_rect = clay_text_bbox_to_cells(cmd->boundingBox);
                     Clay_Color parent_bg = find_parent_bg(cmds, j);
-                    render_text(&ctx, cell_rect, &cmd->renderData.text,
+                    render_text(ctx, cell_rect, &cmd->renderData.text,
                                 parent_bg, cmd->userData);
                     break;
                 }
                 case CLAY_RENDER_COMMAND_TYPE_BORDER: {
                     TUI_CellRect cell_rect = clay_bbox_to_cells(cmd->boundingBox);
                     Clay_Color border_parent_bg = find_parent_bg(cmds, j);
-                    render_border(&ctx, cell_rect, &cmd->renderData.border,
+                    render_border(ctx, cell_rect, &cmd->renderData.border,
                                   border_parent_bg);
                     break;
                 }
                 case CLAY_RENDER_COMMAND_TYPE_SCISSOR_START: {
                     TUI_CellRect cell_rect = clay_bbox_to_cells(cmd->boundingBox);
-                    tui_push_scissor(&ctx, cell_rect);
+                    tui_push_scissor(ctx, cell_rect);
                     break;
                 }
                 case CLAY_RENDER_COMMAND_TYPE_SCISSOR_END: {
-                    tui_pop_scissor(&ctx);
+                    tui_pop_scissor(ctx);
                     break;
                 }
                 default:
