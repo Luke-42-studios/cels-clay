@@ -194,11 +194,15 @@ static Clay_Color find_parent_bg(Clay_RenderCommandArray cmds, int32_t text_idx)
         Clay_RenderCommand* prev = Clay_RenderCommandArray_Get(&cmds, j);
         if (prev->commandType != CLAY_RENDER_COMMAND_TYPE_RECTANGLE) continue;
 
+        /* Skip transparent rectangles (alpha < 2 = border-only, no fill) */
+        Clay_Color bg = prev->renderData.rectangle.backgroundColor;
+        if (bg.a < 2.0f) continue;
+
         Clay_BoundingBox rb = prev->boundingBox;
         if (rb.x <= tb.x && rb.y <= tb.y &&
             rb.x + rb.width >= tb.x + tb.width &&
             rb.y + rb.height >= tb.y + tb.height) {
-            return prev->renderData.rectangle.backgroundColor;
+            return bg;
         }
     }
 
@@ -306,6 +310,113 @@ static void render_border(TUI_DrawContext* ctx, TUI_CellRect rect,
 }
 
 /* ============================================================================
+ * Border Decoration Rendering (CelClayBorderDecor)
+ * ============================================================================
+ *
+ * Draws a TUI border at the RECTANGLE edges when a CelClayBorderDecor is
+ * attached via userData. Bypasses Clay's border system (which AR-scales
+ * uint16_t widths to 2+ cells) — draws 1-cell-wide box-drawing characters.
+ * Optional title-in-border overlays text on the top border line.
+ */
+
+static void render_border_decor(TUI_DrawContext* ctx, TUI_CellRect rect,
+                                 CelClayBorderDecor* decor,
+                                 Clay_Color parent_bg) {
+    /* Map border style enum to TUI border style */
+    TUI_BorderStyle bs;
+    switch (decor->border_style) {
+        case 1:  bs = TUI_BORDER_SINGLE; break;
+        case 2:  bs = TUI_BORDER_DOUBLE; break;
+        default: bs = TUI_BORDER_ROUNDED; break;
+    }
+
+    /* Fill ONLY the interior (inside the border) with panel bg.
+     * Skip fill when bg alpha < 2 (alpha 0-1 = transparent / border-only). */
+    Clay_Color ibg = decor->bg_color;
+    TUI_CellRect inner = {
+        .x = rect.x + 1, .y = rect.y + 1,
+        .w = rect.w - 2, .h = rect.h - 2
+    };
+    if (inner.w > 0 && inner.h > 0 && ibg.a >= 2.0f) {
+        TUI_Style fill_style = {
+            .fg = TUI_COLOR_DEFAULT,
+            .bg = tui_color_rgb((uint8_t)ibg.r, (uint8_t)ibg.g, (uint8_t)ibg.b),
+            .attrs = TUI_ATTR_NORMAL,
+        };
+        tui_draw_fill_rect(ctx, inner, ' ', fill_style);
+    }
+
+    /* Border style: border fg on parent/terminal bg (no panel bg bleed) */
+    Clay_Color c = decor->border_color;
+    TUI_Color border_bg = (parent_bg.a > 0)
+        ? tui_color_rgb((uint8_t)parent_bg.r, (uint8_t)parent_bg.g,
+                        (uint8_t)parent_bg.b)
+        : TUI_COLOR_DEFAULT;
+    TUI_Style style = {
+        .fg = tui_color_rgb((uint8_t)c.r, (uint8_t)c.g, (uint8_t)c.b),
+        .bg = border_bg,
+        .attrs = TUI_ATTR_NORMAL,
+    };
+
+    /* Draw border at rectangle edges */
+    tui_draw_border(ctx, rect, TUI_SIDE_ALL, bs, style);
+
+    /* Draw title on top border line: " Title " overlaying the hline */
+    int title_end = rect.x + 1; /* track where title ends for right_text */
+    if (decor->title && decor->title[0] != '\0') {
+        Clay_Color tc = decor->title_color;
+        uint32_t attrs = TUI_ATTR_NORMAL;
+        if (decor->title_text_attr) {
+            CEL_TextAttr ta = _unpack_text_attr((void*)decor->title_text_attr);
+            attrs = _text_attr_to_tui(ta);
+        }
+
+        TUI_Style title_style = {
+            .fg = tui_color_rgb((uint8_t)tc.r, (uint8_t)tc.g, (uint8_t)tc.b),
+            .bg = border_bg,
+            .attrs = attrs,
+        };
+
+        /* Format: " Title " with spaces as visual separator from border */
+        char title_buf[256];
+        int len = snprintf(title_buf, sizeof(title_buf), " %s ", decor->title);
+        (void)len;
+
+        /* Position 1 cell after upper-left corner, bounded to panel width */
+        int title_x = rect.x + 1;
+        int max_cols = rect.w - 2; /* Leave 1 cell for each corner */
+        if (max_cols > 0) {
+            tui_draw_text_bounded(ctx, title_x, rect.y, title_buf,
+                                   max_cols, title_style);
+            int tlen = (int)strlen(title_buf);
+            title_end = title_x + (tlen < max_cols ? tlen : max_cols);
+        }
+    }
+
+    /* Draw right-aligned text on top border line (e.g., "[X]" for windows) */
+    if (decor->right_text && decor->right_text[0] != '\0') {
+        Clay_Color rc = decor->right_color;
+        TUI_Style right_style = {
+            .fg = tui_color_rgb((uint8_t)rc.r, (uint8_t)rc.g, (uint8_t)rc.b),
+            .bg = border_bg,
+            .attrs = TUI_ATTR_NORMAL,
+        };
+
+        char right_buf[64];
+        int rlen = snprintf(right_buf, sizeof(right_buf), " %s ", decor->right_text);
+        (void)rlen;
+
+        int right_end = rect.x + rect.w - 1; /* 1 cell before right corner */
+        int right_x = right_end - (int)strlen(right_buf);
+        if (right_x > title_end && right_x >= rect.x + 1) {
+            int max_cols = right_end - right_x;
+            tui_draw_text_bounded(ctx, right_x, rect.y, right_buf,
+                                   max_cols, right_style);
+        }
+    }
+}
+
+/* ============================================================================
  * Provider Callback (REND-04 scissor, REND-05 coordinate mapping)
  * ============================================================================
  *
@@ -336,56 +447,36 @@ static void clay_ncurses_render(CELS_Iter* it) {
 
         Clay_RenderCommandArray cmds = data->render_commands;
 
-        /* First pass: check if any commands have zIndex > 0 */
-        bool has_overlay_commands = false;
-        for (int32_t j = 0; j < cmds.length; j++) {
-            Clay_RenderCommand* cmd = Clay_RenderCommandArray_Get(&cmds, j);
-            if (cmd->zIndex > 0) {
-                has_overlay_commands = true;
-                break;
-            }
-        }
-
-        /* Manage overlay layer visibility */
-        TUI_DrawContext overlay_ctx = {0};
-        if (has_overlay_commands) {
-            TUI_Layer* ol = get_or_create_overlay_layer();
-            if (ol) {
-                /* Resize overlay if terminal dimensions changed */
-                if (ol->width != COLS || ol->height != LINES) {
-                    tui_layer_resize(ol, COLS, LINES);
-                }
-                tui_layer_show(ol);
-                werase(ol->win);
-                overlay_ctx = tui_layer_get_draw_context(ol);
-                tui_scissor_reset(&overlay_ctx);
-            }
-        } else if (g_overlay_layer) {
+        /* Hide overlay layer if it exists — all rendering uses the
+         * background layer. Clay sorts commands by zIndex so overlay
+         * content (popups, modals, toasts) draws after background
+         * content and naturally overwrites the correct cells.
+         * A separate ncurses layer would require transparency support
+         * which ncurses panels don't provide. */
+        if (g_overlay_layer) {
             tui_layer_hide(g_overlay_layer);
         }
 
-        /* Render pass: route commands by zIndex */
-        bool using_overlay = false;
+        /* Render pass: all commands draw to background layer */
         TUI_DrawContext* ctx = &bg_ctx;
 
         for (int32_t j = 0; j < cmds.length; j++) {
             Clay_RenderCommand* cmd = Clay_RenderCommandArray_Get(&cmds, j);
 
-            /* Switch draw context based on zIndex */
-            if (cmd->zIndex > 0 && !using_overlay && has_overlay_commands) {
-                ctx = &overlay_ctx;
-                tui_scissor_reset(ctx);
-                using_overlay = true;
-            } else if (cmd->zIndex == 0 && using_overlay) {
-                ctx = &bg_ctx;
-                tui_scissor_reset(ctx);
-                using_overlay = false;
-            }
-
             switch (cmd->commandType) {
                 case CLAY_RENDER_COMMAND_TYPE_RECTANGLE: {
                     TUI_CellRect cell_rect = clay_bbox_to_cells(cmd->boundingBox);
-                    render_rectangle(ctx, cell_rect, &cmd->renderData.rectangle);
+                    if (cmd->userData) {
+                        /* Border decoration: skip normal full-area fill.
+                         * render_border_decor fills only the interior (inside
+                         * border) so panel bg doesn't bleed outside. */
+                        Clay_Color parent_bg = find_parent_bg(cmds, j);
+                        render_border_decor(ctx, cell_rect,
+                                             (CelClayBorderDecor*)cmd->userData,
+                                             parent_bg);
+                    } else {
+                        render_rectangle(ctx, cell_rect, &cmd->renderData.rectangle);
+                    }
                     break;
                 }
                 case CLAY_RENDER_COMMAND_TYPE_TEXT: {

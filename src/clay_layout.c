@@ -260,12 +260,50 @@ static void clay_walk_entity(ecs_world_t* world, ecs_entity_t entity) {
     g_layout_current_entity = prev_entity;
 }
 
+/* Max children for stack-local sort buffer. Overflow falls back to unsorted. */
+#define CEL_CLAY_MAX_SORTED_CHILDREN 128
+
+typedef struct {
+    ecs_entity_t entity;
+    uint32_t order;
+} _CelSortedChild;
+
 static void clay_walk_children(ecs_world_t* world, ecs_entity_t parent) {
+    _CelSortedChild buf[CEL_CLAY_MAX_SORTED_CHILDREN];
+    int count = 0;
+
+    /* Collect children with their sibling order */
+    ecs_entity_t so_id = (ecs_entity_t)CELS_SiblingOrderID;
     ecs_iter_t it = ecs_children(world, parent);
     while (ecs_children_next(&it)) {
         for (int i = 0; i < it.count; i++) {
-            clay_walk_entity(world, it.entities[i]);
+            if (count >= CEL_CLAY_MAX_SORTED_CHILDREN) {
+                /* Overflow: walk remaining unsorted */
+                clay_walk_entity(world, it.entities[i]);
+                continue;
+            }
+            const CELS_SiblingOrder* so = (const CELS_SiblingOrder*)
+                ecs_get_id(world, it.entities[i], so_id);
+            buf[count].entity = it.entities[i];
+            buf[count].order = so ? so->order : (uint32_t)count;
+            count++;
         }
+    }
+
+    /* Insertion sort by order (children count is typically < 20) */
+    for (int i = 1; i < count; i++) {
+        _CelSortedChild tmp = buf[i];
+        int j = i - 1;
+        while (j >= 0 && buf[j].order > tmp.order) {
+            buf[j + 1] = buf[j];
+            j--;
+        }
+        buf[j + 1] = tmp;
+    }
+
+    /* Walk in sorted order */
+    for (int i = 0; i < count; i++) {
+        clay_walk_entity(world, buf[i].entity);
     }
 }
 
@@ -286,7 +324,72 @@ void _cel_clay_emit_children(void) {
     clay_walk_children(g_layout_world, g_layout_current_entity);
 }
 
-/* Emit a specific child entity by index (0-based).
+/* Emit a range of children [start, start+count) in sibling order.
+ * Used by scrollable containers for virtual rendering — only visible
+ * children get Clay elements created, avoiding element overflow.
+ * Uses heap allocation when children exceed the stack sort buffer. */
+void _cel_clay_emit_children_range(int start, int count) {
+    if (!g_layout_pass_active || g_layout_world == NULL) {
+        fprintf(stderr, "[cels-clay] CEL_Clay_ChildrenRange() called outside layout pass\n");
+        return;
+    }
+    if (count <= 0) return;
+
+    /* Collect all children with their sibling order */
+    _CelSortedChild stack_buf[CEL_CLAY_MAX_SORTED_CHILDREN];
+    _CelSortedChild* buf = stack_buf;
+    int total = 0;
+    bool heap = false;
+
+    /* First pass: count children */
+    ecs_entity_t so_id = (ecs_entity_t)CELS_SiblingOrderID;
+    ecs_iter_t it = ecs_children(g_layout_world, g_layout_current_entity);
+    while (ecs_children_next(&it)) {
+        total += it.count;
+    }
+
+    /* Allocate heap buffer if needed */
+    if (total > CEL_CLAY_MAX_SORTED_CHILDREN) {
+        buf = (_CelSortedChild*)malloc(sizeof(_CelSortedChild) * total);
+        if (!buf) return;
+        heap = true;
+    }
+
+    /* Second pass: collect */
+    int collected = 0;
+    it = ecs_children(g_layout_world, g_layout_current_entity);
+    while (ecs_children_next(&it)) {
+        for (int i = 0; i < it.count && collected < total; i++) {
+            const CELS_SiblingOrder* so = (const CELS_SiblingOrder*)
+                ecs_get_id(g_layout_world, it.entities[i], so_id);
+            buf[collected].entity = it.entities[i];
+            buf[collected].order = so ? so->order : (uint32_t)collected;
+            collected++;
+        }
+    }
+
+    /* Insertion sort by sibling order */
+    for (int i = 1; i < collected; i++) {
+        _CelSortedChild tmp = buf[i];
+        int j = i - 1;
+        while (j >= 0 && buf[j].order > tmp.order) {
+            buf[j + 1] = buf[j];
+            j--;
+        }
+        buf[j + 1] = tmp;
+    }
+
+    /* Walk only the visible range */
+    int end = start + count;
+    if (end > collected) end = collected;
+    for (int i = start; i < end; i++) {
+        clay_walk_entity(g_layout_world, buf[i].entity);
+    }
+
+    if (heap) free(buf);
+}
+
+/* Emit a specific child entity by index (0-based, in sibling order).
  * Used by container widgets that need to place children in separate regions
  * (e.g., Widget_Split pane 1 = child 0, pane 2 = child 1).
  * Returns true if a child at that index was found and emitted. */
@@ -296,16 +399,35 @@ bool _cel_clay_emit_child_at_index(int index) {
         return false;
     }
 
-    int current = 0;
+    _CelSortedChild buf[CEL_CLAY_MAX_SORTED_CHILDREN];
+    int count = 0;
+
+    ecs_entity_t so_id = (ecs_entity_t)CELS_SiblingOrderID;
     ecs_iter_t it = ecs_children(g_layout_world, g_layout_current_entity);
     while (ecs_children_next(&it)) {
-        for (int i = 0; i < it.count; i++) {
-            if (current == index) {
-                clay_walk_entity(g_layout_world, it.entities[i]);
-                return true;
-            }
-            current++;
+        for (int i = 0; i < it.count && count < CEL_CLAY_MAX_SORTED_CHILDREN; i++) {
+            const CELS_SiblingOrder* so = (const CELS_SiblingOrder*)
+                ecs_get_id(g_layout_world, it.entities[i], so_id);
+            buf[count].entity = it.entities[i];
+            buf[count].order = so ? so->order : (uint32_t)count;
+            count++;
         }
+    }
+
+    /* Insertion sort by order */
+    for (int i = 1; i < count; i++) {
+        _CelSortedChild tmp = buf[i];
+        int j = i - 1;
+        while (j >= 0 && buf[j].order > tmp.order) {
+            buf[j + 1] = buf[j];
+            j--;
+        }
+        buf[j + 1] = tmp;
+    }
+
+    if (index >= 0 && index < count) {
+        clay_walk_entity(g_layout_world, buf[index].entity);
+        return true;
     }
     return false;  /* No child at that index */
 }

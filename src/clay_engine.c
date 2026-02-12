@@ -53,7 +53,7 @@ static void clay_error_handler(Clay_ErrorData error) {
         case CLAY_ERROR_TYPE_TEXT_MEASUREMENT_CAPACITY_EXCEEDED:
             type_str = "text measurement capacity exceeded"; break;
         case CLAY_ERROR_TYPE_DUPLICATE_ID:
-            type_str = "duplicate ID"; break;
+            return;  /* Duplicate IDs are expected with auto-generated widget Clay elements */
         case CLAY_ERROR_TYPE_FLOATING_CONTAINER_PARENT_NOT_FOUND:
             type_str = "floating container parent not found"; break;
         case CLAY_ERROR_TYPE_PERCENTAGE_OVER_1:

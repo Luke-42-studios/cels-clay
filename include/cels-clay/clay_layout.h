@@ -177,6 +177,21 @@ static void ClaySurface_Impl(ClaySurfaceProps props) {
     _cel_clay_emit_child_at_index(index)
 
 /* ============================================================================
+ * CEL_Clay_ChildrenRange(start, count)
+ * ============================================================================
+ *
+ * Emits only a range of child entities (0-based, in sibling order).
+ * Used by scrollable containers for virtual rendering — only visible
+ * children get Clay elements, avoiding element overflow for large lists.
+ *
+ * Example:
+ *   // Only lay out children [offset, offset + visible)
+ *   CEL_Clay_ChildrenRange(scroll_offset, visible_count);
+ */
+#define CEL_Clay_ChildrenRange(start, count) \
+    _cel_clay_emit_children_range((start), (count))
+
+/* ============================================================================
  * CEL_Clay_Text(buf, len)
  * ============================================================================
  *
@@ -201,6 +216,7 @@ static void ClaySurface_Impl(ClaySurfaceProps props) {
  */
 extern Clay_ElementId _cel_clay_auto_id(uint32_t counter);
 extern void _cel_clay_emit_children(void);
+extern void _cel_clay_emit_children_range(int start, int count);
 extern bool _cel_clay_emit_child_at_index(int index);
 extern Clay_String _cel_clay_frame_arena_string(const char* buf, int32_t len);
 extern bool _cel_clay_layout_active(void);

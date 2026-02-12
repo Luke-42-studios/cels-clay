@@ -67,4 +67,32 @@ extern void _cel_clay_render_system_register(void);
  * in INTERFACE library). Used by clay_ncurses_renderer.c via _CEL_Provides. */
 extern cels_entity_t ClayRenderable_ensure(void);
 
+/* ============================================================================
+ * CelClayBorderDecor - Renderer-drawn border decoration
+ * ============================================================================
+ *
+ * Passed via Clay element .userData to request the renderer draw a TUI
+ * border (box-drawing characters) at the RECTANGLE edges, plus an optional
+ * title-in-border on the top line.
+ *
+ * This bypasses Clay's own border system (which uses uint16_t widths that
+ * get AR-scaled to 2+ cells horizontally). The renderer draws 1-cell-wide
+ * border characters directly using tui_draw_border, matching the draw_test
+ * pattern for tight, correct TUI borders.
+ *
+ * Usage in layout functions:
+ *   static CelClayBorderDecor decor = { .title = "Panel Title", ... };
+ *   CEL_Clay(.userData = &decor, ...) { ... }
+ */
+typedef struct CelClayBorderDecor {
+    const char* title;          /* Title text for top border line (NULL = none) */
+    const char* right_text;     /* Right-aligned text on top border (e.g., "[X]") */
+    Clay_Color border_color;    /* Border line fg color */
+    Clay_Color title_color;     /* Title text fg color */
+    Clay_Color right_color;     /* Right-aligned text fg color */
+    Clay_Color bg_color;        /* Background color (border bg + title bg) */
+    uint8_t border_style;       /* 0=rounded, 1=single, 2=double */
+    uintptr_t title_text_attr;  /* Packed CEL_TextAttr for title (0 = normal) */
+} CelClayBorderDecor;
+
 #endif /* CELS_CLAY_RENDER_H */
