@@ -166,6 +166,17 @@ static void ClaySurface_Impl(ClaySurfaceProps props) {
     _cel_clay_emit_children()
 
 /* ============================================================================
+ * CEL_Clay_ChildAt(index)
+ * ============================================================================
+ *
+ * Emits a specific child entity by index (0-based). Used by container
+ * widgets that render children in separate regions (e.g., split panes).
+ * Returns true if child was found and emitted, false otherwise.
+ */
+#define CEL_Clay_ChildAt(index) \
+    _cel_clay_emit_child_at_index(index)
+
+/* ============================================================================
  * CEL_Clay_Text(buf, len)
  * ============================================================================
  *
@@ -190,6 +201,7 @@ static void ClaySurface_Impl(ClaySurfaceProps props) {
  */
 extern Clay_ElementId _cel_clay_auto_id(uint32_t counter);
 extern void _cel_clay_emit_children(void);
+extern bool _cel_clay_emit_child_at_index(int index);
 extern Clay_String _cel_clay_frame_arena_string(const char* buf, int32_t len);
 extern bool _cel_clay_layout_active(void);
 extern Clay_RenderCommandArray _cel_clay_get_render_commands(void);

@@ -286,6 +286,30 @@ void _cel_clay_emit_children(void) {
     clay_walk_children(g_layout_world, g_layout_current_entity);
 }
 
+/* Emit a specific child entity by index (0-based).
+ * Used by container widgets that need to place children in separate regions
+ * (e.g., Widget_Split pane 1 = child 0, pane 2 = child 1).
+ * Returns true if a child at that index was found and emitted. */
+bool _cel_clay_emit_child_at_index(int index) {
+    if (!g_layout_pass_active || g_layout_world == NULL) {
+        fprintf(stderr, "[cels-clay] _cel_clay_emit_child_at_index() called outside layout pass\n");
+        return false;
+    }
+
+    int current = 0;
+    ecs_iter_t it = ecs_children(g_layout_world, g_layout_current_entity);
+    while (ecs_children_next(&it)) {
+        for (int i = 0; i < it.count; i++) {
+            if (current == index) {
+                clay_walk_entity(g_layout_world, it.entities[i]);
+                return true;
+            }
+            current++;
+        }
+    }
+    return false;  /* No child at that index */
+}
+
 /* ============================================================================
  * Render Command Storage
  * ============================================================================
@@ -337,8 +361,6 @@ static void ClayLayoutSystem_callback(ecs_iter_t* it) {
             {
                 static float prev_w = 0, prev_h = 0;
                 if (config->width != prev_w || config->height != prev_h) {
-                    fprintf(stderr, "[clay-layout] dims: %.0f x %.0f -> %.0f x %.0f\n",
-                            prev_w, prev_h, config->width, config->height);
                     /* Reset text cache on actual resize (not initial 0→real) */
                     if (prev_w > 0 && prev_h > 0) {
                         Clay_ResetMeasureTextCache();
@@ -364,25 +386,15 @@ static void ClayLayoutSystem_callback(ecs_iter_t* it) {
             g_layout_world = world;
             g_layout_pass_active = true;
 
-            /* 4. Walk children of the ClaySurface entity */
-            {
-                static cels_entity_t prev_surface = 0;
-                if (surface != prev_surface) {
-                    fprintf(stderr, "[clay-layout] surface entity: %llu\n",
-                            (unsigned long long)surface);
-                    prev_surface = surface;
-                }
-                /* Count children for debug */
-                int child_count = 0;
-                ecs_iter_t dbg_it = ecs_children(world, surface);
-                while (ecs_children_next(&dbg_it)) child_count += dbg_it.count;
-                static int prev_cc = -1;
-                if (child_count != prev_cc) {
-                    fprintf(stderr, "[clay-layout] surface children: %d\n", child_count);
-                    prev_cc = child_count;
-                }
+            /* 4. Walk children inside a TOP_TO_BOTTOM root container.
+             * Clay's implicit root uses LEFT_TO_RIGHT (enum default 0),
+             * which would arrange widgets horizontally. */
+            CLAY({ .layout = {
+                .layoutDirection = CLAY_TOP_TO_BOTTOM,
+                .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_GROW(0) }
+            }}) {
+                clay_walk_children(world, surface);
             }
-            clay_walk_children(world, surface);
 
             /* 5. End layout pass */
             g_layout_pass_active = false;
