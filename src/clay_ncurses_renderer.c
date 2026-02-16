@@ -612,8 +612,11 @@ void clay_ncurses_renderer_init(const ClayNcursesTheme* theme) {
     /* Register text measurement callback */
     Clay_SetMeasureTextFunction(clay_ncurses_measure_text, NULL);
 
-    /* Register as ClayRenderable provider (backend name must match TUI_Engine's "TUI") */
-    _CEL_Provides(TUI, ClayRenderable, ClayRenderableData, clay_ncurses_render);
+    /* Register render system directly (Feature/Provider retired in v0.4) */
+    ClayRenderableData_ensure();
+    cels_entity_t comp_ids[] = { ClayRenderableDataID };
+    cels_system_declare("TUI_ClayRenderable_ClayRenderableData",
+                        CELS_Phase_OnRender, clay_ncurses_render, comp_ids, 1);
 }
 
 void clay_ncurses_renderer_set_theme(const ClayNcursesTheme* theme) {

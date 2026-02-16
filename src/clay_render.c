@@ -25,23 +25,18 @@
 #include <stdbool.h>
 
 /* ============================================================================
- * Feature Definition (file scope)
+ * Feature Definition (file scope) -- Feature/Provider system retired in v0.4
  * ============================================================================
  *
- * Defines the ClayRenderable feature at OnStore phase. Expanded manually
- * from _CEL_DefineFeature to use non-static linkage so the ensure function
- * is visible from clay_ncurses_renderer.c (INTERFACE library compiles each
- * source as a separate TU in the consumer's context).
+ * ClayRenderable_ensure() returns a stable non-zero ID for backward
+ * compatibility. The Feature/Provider system is no longer used; render
+ * systems are registered directly via cels_system_declare().
  */
 cels_entity_t ClayRenderable_feature_id = 0;
-FeatureProps ClayRenderable_feature_props;
+static unsigned int _clay_feature_counter = 2000;
 cels_entity_t ClayRenderable_ensure(void) {
     if (ClayRenderable_feature_id == 0) {
-        ClayRenderable_feature_props = (FeatureProps){
-            .phase = CELS_Phase_OnStore, .priority = 0
-        };
-        ClayRenderable_feature_id = cels_feature_define(
-            "ClayRenderable", &ClayRenderable_feature_props);
+        ClayRenderable_feature_id = (cels_entity_t)(++_clay_feature_counter);
     }
     return ClayRenderable_feature_id;
 }
@@ -130,7 +125,8 @@ void _cel_clay_render_init(void) {
     ecs_set_id(world, g_render_target, ClayRenderableDataID,
                sizeof(ClayRenderableData), &initial);
 
-    _CEL_Feature(ClayRenderableData, ClayRenderable);
+    /* Feature/Provider retired in v0.4 -- _CEL_Feature call removed */
+    (void)ClayRenderable_ensure();
 }
 
 /* ============================================================================
