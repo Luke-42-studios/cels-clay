@@ -91,6 +91,7 @@ extern void ClaySurfaceConfig_register(void);
  * multiple TUs in the INTERFACE library pattern. */
 typedef struct ClaySurfaceProps {
     LifecycleDef_C* lifecycle;
+    const char* id;
     float width;
     float height;
 } ClaySurfaceProps;
