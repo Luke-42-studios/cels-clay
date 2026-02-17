@@ -46,7 +46,7 @@ typedef struct ClayUI {
 } ClayUI;
 
 extern cels_entity_t ClayUIID;
-extern cels_entity_t ClayUI_ensure(void);
+extern void ClayUI_register(void);
 
 /* ============================================================================
  * ClaySurfaceConfig Component
@@ -61,7 +61,7 @@ typedef struct ClaySurfaceConfig {
 } ClaySurfaceConfig;
 
 extern cels_entity_t ClaySurfaceConfigID;
-extern cels_entity_t ClaySurfaceConfig_ensure(void);
+extern void ClaySurfaceConfig_register(void);
 
 /* ============================================================================
  * ClaySurface Composition (built-in)

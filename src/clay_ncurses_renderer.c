@@ -613,7 +613,7 @@ void clay_ncurses_renderer_init(const ClayNcursesTheme* theme) {
     Clay_SetMeasureTextFunction(clay_ncurses_measure_text, NULL);
 
     /* Register render system directly (Feature/Provider retired in v0.4) */
-    ClayRenderableData_ensure();
+    ClayRenderableData_register();
     cels_entity_t comp_ids[] = { ClayRenderableDataID };
     cels_system_declare("TUI_ClayRenderable_ClayRenderableData",
                         CELS_Phase_OnRender, clay_ncurses_render, comp_ids, 1);

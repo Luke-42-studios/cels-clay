@@ -39,7 +39,7 @@ typedef struct ClayRenderableData {
 } ClayRenderableData;
 
 extern cels_entity_t ClayRenderableDataID;
-extern cels_entity_t ClayRenderableData_ensure(void);
+extern void ClayRenderableData_register(void);
 
 /* ============================================================================
  * Public Getter API
@@ -63,9 +63,9 @@ extern Clay_RenderCommandArray cel_clay_get_render_commands(void);
 extern void _cel_clay_render_init(void);
 extern void _cel_clay_render_system_register(void);
 
-/* ClayRenderable feature ensure function (non-static for cross-TU visibility
+/* ClayRenderable feature register function (non-static for cross-TU visibility
  * in INTERFACE library). Used by clay_ncurses_renderer.c via _CEL_Provides. */
-extern cels_entity_t ClayRenderable_ensure(void);
+extern void ClayRenderable_register(void);
 
 /* ============================================================================
  * CelClayBorderDecor - Renderer-drawn border decoration

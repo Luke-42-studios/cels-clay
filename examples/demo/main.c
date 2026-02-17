@@ -209,7 +209,7 @@ CEL_Build(DemoApp) {
     clay_ncurses_renderer_init(NULL);  /* Default theme */
 
     /* Register input system (global, not lifecycle-scoped) */
-    DemoInputSystem_ensure();
+    CEL_Register(DemoInputSystem);
 
     /* Initial application state */
     NavState = (NavState_t){

@@ -28,17 +28,16 @@
  * Feature Definition (file scope) -- Feature/Provider system retired in v0.4
  * ============================================================================
  *
- * ClayRenderable_ensure() returns a stable non-zero ID for backward
+ * ClayRenderable_register() assigns a stable non-zero ID for backward
  * compatibility. The Feature/Provider system is no longer used; render
  * systems are registered directly via cels_system_declare().
  */
 cels_entity_t ClayRenderable_feature_id = 0;
 static unsigned int _clay_feature_counter = 2000;
-cels_entity_t ClayRenderable_ensure(void) {
+void ClayRenderable_register(void) {
     if (ClayRenderable_feature_id == 0) {
         ClayRenderable_feature_id = (cels_entity_t)(++_clay_feature_counter);
     }
-    return ClayRenderable_feature_id;
 }
 
 /* ============================================================================
@@ -47,12 +46,11 @@ cels_entity_t ClayRenderable_ensure(void) {
 
 cels_entity_t ClayRenderableDataID = 0;
 
-cels_entity_t ClayRenderableData_ensure(void) {
+void ClayRenderableData_register(void) {
     if (ClayRenderableDataID == 0) {
         ClayRenderableDataID = cels_component_register("ClayRenderableData",
             sizeof(ClayRenderableData), CELS_ALIGNOF(ClayRenderableData));
     }
-    return ClayRenderableDataID;
 }
 
 /* ============================================================================
@@ -113,7 +111,7 @@ Clay_RenderCommandArray cel_clay_get_render_commands(void) {
  * are available.
  */
 void _cel_clay_render_init(void) {
-    ClayRenderableData_ensure();
+    ClayRenderableData_register();
 
     ecs_world_t* world = cels_get_world(cels_get_context());
 
@@ -126,7 +124,7 @@ void _cel_clay_render_init(void) {
                sizeof(ClayRenderableData), &initial);
 
     /* Feature/Provider retired in v0.4 -- _CEL_Feature call removed */
-    (void)ClayRenderable_ensure();
+    ClayRenderable_register();
 }
 
 /* ============================================================================

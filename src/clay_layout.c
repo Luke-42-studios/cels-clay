@@ -44,20 +44,18 @@ extern Clay_ElementId Clay__HashNumber(const uint32_t offset, const uint32_t see
 cels_entity_t ClayUIID = 0;
 cels_entity_t ClaySurfaceConfigID = 0;
 
-cels_entity_t ClayUI_ensure(void) {
+void ClayUI_register(void) {
     if (ClayUIID == 0) {
         ClayUIID = cels_component_register("ClayUI",
             sizeof(ClayUI), CELS_ALIGNOF(ClayUI));
     }
-    return ClayUIID;
 }
 
-cels_entity_t ClaySurfaceConfig_ensure(void) {
+void ClaySurfaceConfig_register(void) {
     if (ClaySurfaceConfigID == 0) {
         ClaySurfaceConfigID = cels_component_register("ClaySurfaceConfig",
             sizeof(ClaySurfaceConfig), CELS_ALIGNOF(ClaySurfaceConfig));
     }
-    return ClaySurfaceConfigID;
 }
 
 /* ============================================================================
@@ -209,8 +207,8 @@ void _cel_clay_layout_init(void) {
     Clay_SetMeasureTextFunction(_cel_clay_measure_text, NULL);
 
     /* Ensure components are registered */
-    ClayUI_ensure();
-    ClaySurfaceConfig_ensure();
+    ClayUI_register();
+    ClaySurfaceConfig_register();
 }
 
 void _cel_clay_layout_cleanup(void) {
