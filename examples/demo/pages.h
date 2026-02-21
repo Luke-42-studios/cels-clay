@@ -1,4 +1,20 @@
 /*
+ * Copyright 2026 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/*
  * Demo App Pages - Layout Functions and Compositions
  *
  * Defines the entire UI structure as Clay layout functions attached to
@@ -512,65 +528,65 @@ CEL_Clay_Layout(about_page_layout) {
 
 /* -- TitleBar -------------------------------------------------------------- */
 
-#define TitleBar(...) CEL_Init(TitleBar, __VA_ARGS__)
+#define TitleBar(...) cel_init(TitleBar, __VA_ARGS__)
 CEL_Composition(TitleBar) {
     (void)props;
-    CEL_Has(ClayUI, .layout_fn = title_bar_layout);
+    cel_has(ClayUI, .layout_fn = title_bar_layout);
 }
 
 /* -- StatusBar ------------------------------------------------------------- */
 
-#define StatusBar(...) CEL_Init(StatusBar, __VA_ARGS__)
+#define StatusBar(...) cel_init(StatusBar, __VA_ARGS__)
 CEL_Composition(StatusBar) {
     (void)props;
-    CEL_Has(ClayUI, .layout_fn = status_bar_layout);
+    cel_has(ClayUI, .layout_fn = status_bar_layout);
 }
 
 /* -- NavItem: sidebar entry with label and index --------------------------- */
 
-#define NavItem(...) CEL_Init(NavItem, __VA_ARGS__)
+#define NavItem(...) cel_init(NavItem, __VA_ARGS__)
 CEL_Composition(NavItem, const char* label; int index;) {
-    CEL_Has(ClayUI, .layout_fn = nav_item_layout);
-    CEL_Has(NavItemData, .label = props.label, .index = props.index);
+    cel_has(ClayUI, .layout_fn = nav_item_layout);
+    cel_has(NavItemData, .label = props.label, .index = props.index);
 }
 
 /* -- Sidebar --------------------------------------------------------------- */
 
-#define Sidebar(...) CEL_Init(Sidebar, __VA_ARGS__)
+#define Sidebar(...) cel_init(Sidebar, __VA_ARGS__)
 CEL_Composition(Sidebar) {
     (void)props;
-    CEL_Has(ClayUI, .layout_fn = sidebar_layout);
+    cel_has(ClayUI, .layout_fn = sidebar_layout);
 }
 
 /* -- HomePage -------------------------------------------------------------- */
 
-#define HomePage(...) CEL_Init(HomePage, __VA_ARGS__)
+#define HomePage(...) cel_init(HomePage, __VA_ARGS__)
 CEL_Composition(HomePage) {
     (void)props;
-    CEL_Has(ClayUI, .layout_fn = home_page_layout);
+    cel_has(ClayUI, .layout_fn = home_page_layout);
 }
 
 /* -- SettingsPage ---------------------------------------------------------- */
 
-#define SettingsPage(...) CEL_Init(SettingsPage, __VA_ARGS__)
+#define SettingsPage(...) cel_init(SettingsPage, __VA_ARGS__)
 CEL_Composition(SettingsPage) {
     (void)props;
     /* Watch DemoSettings so layout updates when toggles change */
     CEL_Watch(DemoSettings);
-    CEL_Has(ClayUI, .layout_fn = settings_page_layout);
+    cel_has(ClayUI, .layout_fn = settings_page_layout);
 }
 
 /* -- AboutPage ------------------------------------------------------------- */
 
-#define AboutPage(...) CEL_Init(AboutPage, __VA_ARGS__)
+#define AboutPage(...) cel_init(AboutPage, __VA_ARGS__)
 CEL_Composition(AboutPage) {
     (void)props;
-    CEL_Has(ClayUI, .layout_fn = about_page_layout);
+    cel_has(ClayUI, .layout_fn = about_page_layout);
 }
 
 /* -- ContentRouter: watches NavState and mounts active page ---------------- */
 
-#define ContentRouter(...) CEL_Init(ContentRouter, __VA_ARGS__)
+#define ContentRouter(...) cel_init(ContentRouter, __VA_ARGS__)
 CEL_Composition(ContentRouter) {
     (void)props;
     NavState_t* nav = CEL_Watch(NavState);
@@ -585,26 +601,26 @@ CEL_Composition(ContentRouter) {
 
 /* -- ContentArea ----------------------------------------------------------- */
 
-#define ContentArea(...) CEL_Init(ContentArea, __VA_ARGS__)
+#define ContentArea(...) cel_init(ContentArea, __VA_ARGS__)
 CEL_Composition(ContentArea) {
     (void)props;
-    CEL_Has(ClayUI, .layout_fn = content_area_layout);
+    cel_has(ClayUI, .layout_fn = content_area_layout);
 }
 
 /* -- MainBody: horizontal split -------------------------------------------- */
 
-#define MainBody(...) CEL_Init(MainBody, __VA_ARGS__)
+#define MainBody(...) cel_init(MainBody, __VA_ARGS__)
 CEL_Composition(MainBody) {
     (void)props;
-    CEL_Has(ClayUI, .layout_fn = main_body_layout);
+    cel_has(ClayUI, .layout_fn = main_body_layout);
 }
 
 /* -- AppShell: root layout container --------------------------------------- */
 
-#define AppShell(...) CEL_Init(AppShell, __VA_ARGS__)
+#define AppShell(...) cel_init(AppShell, __VA_ARGS__)
 CEL_Composition(AppShell) {
     (void)props;
-    CEL_Has(ClayUI, .layout_fn = app_shell_layout);
+    cel_has(ClayUI, .layout_fn = app_shell_layout);
 
     TitleBar() {}
     MainBody() {

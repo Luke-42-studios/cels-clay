@@ -1,4 +1,20 @@
 /*
+ * Copyright 2026 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/*
  * Clay Layout System - Complete Implementation
  *
  * Implements the CELS-Clay layout system:
@@ -41,19 +57,19 @@ extern Clay_ElementId Clay__HashNumber(const uint32_t offset, const uint32_t see
  * cross-file access within the module.
  */
 
-cels_entity_t ClayUIID = 0;
-cels_entity_t ClaySurfaceConfigID = 0;
+cels_entity_t ClayUI_id = 0;
+cels_entity_t ClaySurfaceConfig_id = 0;
 
 void ClayUI_register(void) {
-    if (ClayUIID == 0) {
-        ClayUIID = cels_component_register("ClayUI",
+    if (ClayUI_id == 0) {
+        ClayUI_id = cels_component_register("ClayUI",
             sizeof(ClayUI), CELS_ALIGNOF(ClayUI));
     }
 }
 
 void ClaySurfaceConfig_register(void) {
-    if (ClaySurfaceConfigID == 0) {
-        ClaySurfaceConfigID = cels_component_register("ClaySurfaceConfig",
+    if (ClaySurfaceConfig_id == 0) {
+        ClaySurfaceConfig_id = cels_component_register("ClaySurfaceConfig",
             sizeof(ClaySurfaceConfig), CELS_ALIGNOF(ClaySurfaceConfig));
     }
 }
@@ -237,7 +253,7 @@ void _cel_clay_layout_cleanup(void) {
 
 static void clay_walk_entity(ecs_world_t* world, ecs_entity_t entity) {
     const ClayUI* layout = (const ClayUI*)ecs_get_id(
-        world, entity, ClayUIID);
+        world, entity, ClayUI_id);
 
     /* Save/restore current entity for nested CEL_Clay_Children calls */
     ecs_entity_t prev_entity = g_layout_current_entity;
@@ -466,12 +482,12 @@ static void ClayLayoutSystem_callback(ecs_iter_t* it) {
     ecs_world_t* world = cels_get_world(cels_get_context());
 
     /* Find ClaySurface entities by querying for ClaySurfaceConfig */
-    ecs_iter_t surface_it = ecs_each_id(world, ClaySurfaceConfigID);
+    ecs_iter_t surface_it = ecs_each_id(world, ClaySurfaceConfig_id);
     while (ecs_each_next(&surface_it)) {
         for (int i = 0; i < surface_it.count; i++) {
             ecs_entity_t surface = surface_it.entities[i];
             const ClaySurfaceConfig* config = (const ClaySurfaceConfig*)
-                ecs_get_id(world, surface, ClaySurfaceConfigID);
+                ecs_get_id(world, surface, ClaySurfaceConfig_id);
             if (!config) continue;
 
             /* Skip layout if dimensions are too small */

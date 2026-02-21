@@ -1,4 +1,20 @@
 /*
+ * Copyright 2026 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/*
  * Clay ncurses Renderer - Implementation
  *
  * Translates Clay_RenderCommandArray into terminal output using the
@@ -433,7 +449,7 @@ static void render_border_decor(TUI_DrawContext* ctx, TUI_CellRect rect,
 static void clay_ncurses_render(CELS_Iter* it) {
     int count = cels_iter_count(it);
     ClayRenderableData* data = (ClayRenderableData*)cels_iter_column(
-        it, ClayRenderableDataID, sizeof(ClayRenderableData));
+        it, ClayRenderableData_id, sizeof(ClayRenderableData));
     for (int i = 0; i < count; i++) {
         if (!data->dirty) continue;
 
@@ -614,7 +630,7 @@ void clay_ncurses_renderer_init(const ClayNcursesTheme* theme) {
 
     /* Register render system directly (Feature/Provider retired in v0.4) */
     ClayRenderableData_register();
-    cels_entity_t comp_ids[] = { ClayRenderableDataID };
+    cels_entity_t comp_ids[] = { ClayRenderableData_id };
     cels_system_declare("TUI_ClayRenderable_ClayRenderableData",
                         CELS_Phase_OnRender, clay_ncurses_render, comp_ids, 1);
 }

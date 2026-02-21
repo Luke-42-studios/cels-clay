@@ -1,4 +1,20 @@
 /*
+ * Copyright 2026 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/*
  * Clay Render Bridge - Implementation
  *
  * Implements the render bridge subsystem:
@@ -44,11 +60,11 @@ void ClayRenderable_register(void) {
  * Component Registration
  * ============================================================================ */
 
-cels_entity_t ClayRenderableDataID = 0;
+cels_entity_t ClayRenderableData_id = 0;
 
 void ClayRenderableData_register(void) {
-    if (ClayRenderableDataID == 0) {
-        ClayRenderableDataID = cels_component_register("ClayRenderableData",
+    if (ClayRenderableData_id == 0) {
+        ClayRenderableData_id = cels_component_register("ClayRenderableData",
             sizeof(ClayRenderableData), CELS_ALIGNOF(ClayRenderableData));
     }
 }
@@ -87,7 +103,7 @@ static void ClayRenderDispatch_callback(ecs_iter_t* it) {
         .dirty = (commands.length > 0)
     };
 
-    ecs_set_id(world, g_render_target, ClayRenderableDataID,
+    ecs_set_id(world, g_render_target, ClayRenderableData_id,
                sizeof(ClayRenderableData), &data);
 }
 
@@ -120,7 +136,7 @@ void _cel_clay_render_init(void) {
     });
 
     ClayRenderableData initial = {0};
-    ecs_set_id(world, g_render_target, ClayRenderableDataID,
+    ecs_set_id(world, g_render_target, ClayRenderableData_id,
                sizeof(ClayRenderableData), &initial);
 
     /* Feature/Provider retired in v0.4 -- _CEL_Feature call removed */

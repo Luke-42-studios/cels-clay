@@ -1,4 +1,20 @@
 /*
+ * Copyright 2026 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/*
  * Demo App Components
  *
  * App-level component and state definitions for the cels-clay demo.
@@ -27,7 +43,7 @@
  * focus_pane: 0 = sidebar (j/k navigates sidebar items)
  *             1 = content (j/k operates within the active page)
  */
-CEL_State(NavState, {
+cel_state(NavState, {
     int current_page;       /* 0=Home, 1=Settings, 2=About */
     int sidebar_selected;   /* Highlighted sidebar item index */
     int focus_pane;         /* 0=sidebar, 1=content */
@@ -41,7 +57,7 @@ CEL_State(NavState, {
  * show_borders: controls whether the content area has visible borders
  * color_mode: 0 = Theme A (cool blue), 1 = Theme B (warm amber)
  */
-CEL_State(DemoSettings, {
+cel_state(DemoSettings, {
     bool show_borders;      /* Content area border visibility */
     int color_mode;         /* 0=Theme A, 1=Theme B */
 });

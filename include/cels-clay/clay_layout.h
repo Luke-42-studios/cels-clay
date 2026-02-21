@@ -1,4 +1,20 @@
 /*
+ * Copyright 2026 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/*
  * Clay Layout System - Public API for CELS-Clay Layout Integration
  *
  * Provides the developer-facing API for building Clay layout trees from
@@ -45,7 +61,7 @@ typedef struct ClayUI {
     CelClayLayoutFn layout_fn;
 } ClayUI;
 
-extern cels_entity_t ClayUIID;
+extern cels_entity_t ClayUI_id;
 extern void ClayUI_register(void);
 
 /* ============================================================================
@@ -60,7 +76,7 @@ typedef struct ClaySurfaceConfig {
     float height;
 } ClaySurfaceConfig;
 
-extern cels_entity_t ClaySurfaceConfigID;
+extern cels_entity_t ClaySurfaceConfig_id;
 extern void ClaySurfaceConfig_register(void);
 
 /* ============================================================================
@@ -102,10 +118,10 @@ static void ClaySurface_factory(void* _raw_props) {
     ClaySurface_Impl(_p);
 }
 static void ClaySurface_Impl(ClaySurfaceProps props) {
-    CEL_Has(ClaySurfaceConfig, .width = props.width, .height = props.height);
+    cel_has(ClaySurfaceConfig, .width = props.width, .height = props.height);
 }
 
-#define ClaySurface(...) CEL_Init(ClaySurface, __VA_ARGS__)
+#define ClaySurface(...) cel_init(ClaySurface, __VA_ARGS__)
 
 /* ============================================================================
  * CEL_Clay_Layout(name)
