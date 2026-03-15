@@ -2,78 +2,94 @@
 
 ## What This Is
 
-A CELS module that integrates the Clay UI layout library into the CELS declarative ECS framework. Developers write app structure with CELS (state, reactivity, lifecycle) and drop into Clay's `CLAY()` macro DSL for UI subtrees. cels-clay owns Clay initialization, runs layout each frame, and exposes render commands via the CELS Feature/Provider pattern for backend renderers to consume.
+A CELS module that provides a declarative, entity-based UI framework powered by Clay layout. Developers build UI by composing entities — Row, Column, Box, Text — with per-entity properties, following patterns inspired by Jetpack Compose and Godot's scene tree. cels-clay owns Clay initialization, runs layout each frame, and ships both SDL3 and NCurses renderers that developers select via module registration.
 
 ## Core Value
 
-Declarative UI development where CELS handles application state and reactivity while Clay handles layout — developers get the best of both without hand-rolling layout math or managing UI state manually.
+Declarative UI development where developers build interfaces by composing entities with layout properties — CELS handles state and reactivity, Clay handles layout math, and the renderer is a pluggable detail selected at registration time.
+
+## Current Milestone: v0.6 Entity-Based UI + Dual Renderers
+
+**Goal:** Rewrite cels-clay from layout-function model to a pure entity/component UI model with Compose-inspired primitives and dual SDL3/NCurses rendering.
+
+**Target features:**
+- Compose-inspired entity primitives: Row, Column, Box, Spacer, Text, Image
+- Per-entity tailored property components (RowProps, ColumnProps, etc.)
+- Modern CELS patterns: CEL_Module, CEL_Lifecycle, CEL_System, state singletons
+- SDL3 renderer (inside cels-clay, compiled when cels-sdl3 available)
+- NCurses renderer (inside cels-clay, compiled when cels-ncurses available)
+- Renderer selection via module registration order
+- Minimal example app that renders on both backends
 
 ## Requirements
 
 ### Validated
 
-(None yet — ship to validate)
+- [x] Clay library fetched via CMake FetchContent
+- [x] CMake INTERFACE library pattern
+- [x] Clay arena initialization and lifecycle management
+- [x] Clay error handler wired to logging
+- [x] Entity tree walked depth-first for correct Clay nesting
+- [x] One global Clay tree per frame (immediate-mode rebuild)
+- [x] Float-to-cell coordinate mapping for terminal rendering
+- [x] RGBA-to-ncurses color mapping
+- [x] Unicode box-drawing border rendering
+- [x] Scissor/clipping support
+- [x] Text measurement callback system
 
 ### Active
 
-- [ ] ClayUI component with layout function pointer (CEL_Has(ClayUI, .layout = fn))
-- [ ] CEL_Clay_Layout() macro for defining layout functions
-- [ ] Clay_Get() helper macro for reading entity components in layout functions
-- [ ] CEL_Clay_Children() helper for recursive child entity layout emission
-- [ ] Entity-backed Clay layout (ClayUI component marks entities for tree participation)
-- [ ] One global Clay tree per frame (all active compositions contribute)
-- [ ] Full rebuild each frame (immediate-mode — CELS reactivity controls which compositions run, Clay re-layouts what's declared)
-- [ ] Clay initialization and arena management owned by cels-clay module
-- [ ] ClayRenderable Feature defined by cels-clay
-- [ ] Provider callback pattern for renderer backends (receives Clay_RenderCommandArray)
-- [ ] Clay fetched via CMake FetchContent (no manual dependency management)
-- [ ] cels-ncurses drawing primitives (rect, text, border, color, scissor) — prerequisite for demo
-- [ ] ncurses Clay renderer that translates Clay render commands to cels-ncurses primitives
-- [ ] Demo app: sidebar + content area with text and a button, rendered in terminal via Clay layout
-- [ ] No cross-module dependencies (cels-clay and cels-ncurses are siblings, app wires them)
+- [ ] Entity-based UI primitives: Row, Column, Box, Spacer, Text, Image
+- [ ] Per-entity property components (RowProps, ColumnProps, BoxProps, TextProps, etc.)
+- [ ] ClaySurface as root layout boundary composition
+- [ ] Modern CELS module pattern (CEL_Module, CEL_Lifecycle, CEL_System)
+- [ ] State singletons with cross-TU registry
+- [ ] SDL3 Clay renderer (compiled when cels-sdl3 target exists)
+- [ ] NCurses Clay renderer (compiled when cels-ncurses target exists)
+- [ ] Renderer selection via module registration
+- [ ] Minimal dual-renderer example app
 
 ### Out of Scope
 
-- SDL renderer — future module, not v1
-- Widget library — Clay provides layout, widgets are app-level compositions
+- Layout functions / function pointers — pure entity model for v0.6
+- Widget library (Button, TextInput, Slider) — app-level compositions
 - Animation/tweening — application-level concern
-- Mouse input — ncurses v1 is keyboard-only
-- True color support — design for future, 8/256 color for now
-- Image/bitmap rendering — not applicable in terminal
-- Text editing/input fields — widget-level, not layout-level
-- Clay configuration GUI — this is a code-first API
+- Mouse input — keyboard-only for now
+- Text editing/input fields — widget-level concern
+- ListView / ScrollView — deferred to future milestone (own phase)
+- Clay configuration GUI — code-first API
 
 ## Context
 
-- CELS v0.1 is complete (main branch) with full DSL: CEL_Component, CEL_Composition, CEL_Init, CEL_State, CEL_Observe, etc.
-- cels-ncurses exists as a module with window lifecycle, input provider, and basic renderer — but its planned graphics API (drawing primitives, layers, frame pipeline) from research docs is not yet built
-- Clay is a single-header C library (~4000 lines) with flexbox-style layout, zero deps, arena-based memory, and renderer-agnostic render command output
-- Clay already has an SDL3 renderer reference implementation we can study for the ncurses renderer
-- The hybrid API model was chosen: CELS for app structure + reactivity, CLAY() for UI subtrees
-- Dependency tree: app → {cels, cels-clay, cels-ncurses} where cels-clay and cels-ncurses are sibling modules with no cross-dependencies
+- CELS v0.4+ is the target API (CEL_Module, CEL_Register, observer-driven lifecycles, state singletons with cross-TU registry)
+- cels-sdl3 v0.1 exists with SDL3 context initialization (SDL_Init, TTF_Init) — follows the CELS module pattern
+- cels-ncurses v0.6 exists with full terminal rendering: window lifecycle, input, drawing primitives, surfaces, sub-cell rendering
+- Both cels-sdl3 and cels-ncurses follow the same module architecture: CEL_Module facade, observer-driven lifecycle, state singletons
+- v0.5 cels-clay built the foundation (Clay integration, layout system, ncurses renderer) but uses outdated CELS patterns (Feature/Provider, layout function pointers)
+- Clay is a single-header C library with flexbox-style layout, arena-based memory, renderer-agnostic render command output
+- The entity model draws from Jetpack Compose (Row, Column, Box as composables with layout properties) and Godot (Surface → CanvasItem hierarchy)
 
 ## Constraints
 
 - **Language**: C99 public API, C++17 internal implementation (matches CELS convention)
-- **Build**: CMake INTERFACE library pattern (same as cels-ncurses)
+- **Build**: CMake INTERFACE library pattern
 - **Clay version**: Latest stable from GitHub via FetchContent
-- **Terminal**: ncurses backend for v1 demo — float-to-cell coordinate mapping required
-- **CELS API**: Must use existing v0.1 macros and patterns (CEL_DefineModule, CEL_Feature, CEL_Provides, etc.)
-- **No cross-module deps**: cels-clay must not depend on cels-ncurses and vice versa
+- **CELS API**: Must use v0.4+ patterns (CEL_Module, CEL_Register, CEL_Lifecycle, CEL_System)
+- **Renderers**: Both live inside cels-clay, conditionally compiled based on available backend targets
+- **Dependencies**: cels-sdl3 and cels-ncurses are optional dependencies (renderers compile only when their targets exist)
 
 ## Key Decisions
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Clay as component model | ClayUI component with layout fn pointer on entities. One module system walks tree. See .planning/API-DESIGN.md | Agreed |
-| One global Clay tree per frame | All compositions contribute to single layout tree — Clay sees whole UI for correct layout math | Agreed |
-| Full rebuild each frame | Clay is immediate-mode by design. CELS reactivity controls which compositions are active, not incremental layout updates | Agreed |
-| Entity-backed Clay layout | ClayUI component marks entities for layout participation — layout system queries these during tree walk | Agreed |
-| Separated layout functions | C99 has no closures — layout functions defined outside compositions, read entity components via Clay_Get() | Agreed |
-| Input via CEL_Use systems | Per-composition input systems run at OnUpdate, mutate state via CEL_Update, trigger reactive recomposition | Agreed |
-| Provider callback for rendering | Follows existing CELS Feature/Provider pattern (same as cels-ncurses). Clean contract between layout and rendering | — Pending |
-| Sibling module architecture | cels-clay and cels-ncurses have no cross-deps. App wires them together. Keeps dependency tree clean | — Pending |
-| Build ncurses primitives first | Correct layering: Clay renderer uses cels-ncurses abstractions, not raw ncurses calls | — Pending |
+| One global Clay tree per frame | All compositions contribute to single layout tree — Clay sees whole UI for correct layout math | ✓ Good |
+| Full rebuild each frame | Clay is immediate-mode by design. CELS reactivity controls which compositions are active | ✓ Good |
+| Entity-backed Clay layout | Entity tree IS the UI tree — parent-child relationships define nesting | ✓ Good |
+| Pure entity model (no layout fns) | Compose-inspired: Row, Column, Box as entities with properties. Simpler DX than function pointers | — Pending |
+| Per-entity property components | Each entity type has tailored props (RowProps, ColumnProps) vs shared ClayLayout component | — Pending |
+| Renderers inside cels-clay | Both SDL3 and NCurses renderers ship with cels-clay, conditionally compiled | — Pending |
+| Renderer via module registration | Developer registers Clay_NCurses or Clay_SDL3 module. No explicit config needed | — Pending |
+| Retire Feature/Provider pattern | Replace with modern CELS module pattern (CEL_Module, CEL_System, observers) | — Pending |
 
 ---
-*Last updated: 2026-02-07 after initialization*
+*Last updated: 2026-03-15 after v0.6 milestone initialization*
