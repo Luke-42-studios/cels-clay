@@ -1,619 +1,329 @@
-# Architecture: cels-clay Module
+# Architecture: cels-clay v0.6 Entity-Based UI
 
-**Domain:** CELS-Clay hybrid UI layout integration
-**Researched:** 2026-02-07
-**Confidence:** HIGH (derived from Clay 0.14 header analysis + CELS v0.1 runtime source + cels-ncurses reference architecture)
+**Domain:** Compose-Inspired Entity-Based UI Framework (CELS + Clay)
+**Researched:** 2026-03-15
+**Confidence:** HIGH (derived from CELS v0.4 API, Clay API, cels-sdl3/cels-ncurses module patterns, v0.5 implementation)
 
-## Executive Summary
+## Overview
 
-cels-clay bridges Clay's immediate-mode layout engine into CELS's reactive declarative framework. The fundamental tension: Clay rebuilds its entire element tree every frame via `Clay_BeginLayout` / `Clay_EndLayout`, while CELS compositions only re-execute when observed state changes. The architecture resolves this by making CELS compositions emit CLAY() calls as part of a single coordinated layout pass that runs every frame during the OnRender phase, while CELS reactivity controls *which* compositions participate in the rebuild.
+v0.6 replaces the layout-function model with a pure entity/component model. The architecture has four layers:
 
-## Recommended Architecture
+1. **Entity Layer** — Compositions (Row, Column, Box, Text, Spacer, Image) create entities with per-type property components
+2. **Layout Layer** — A system walks the entity tree, reads property components, and emits `CLAY()` calls to build the layout tree
+3. **Render Bridge** — Clay produces a `Clay_RenderCommandArray`; the bridge makes it available to the active renderer
+4. **Renderer Layer** — SDL3 or NCurses renderer system consumes render commands and draws
 
-```
-                          CELS Frame Pipeline
-                          ==================
+## Component Model
 
-  OnLoad        PostLoad         OnUpdate       PreStore        OnStore         OnRender
-  ------        --------         --------       --------        -------         --------
-  Lifecycle     Recomposition    App Systems    Clay Layout     (unused)        Clay Render
-  Input Read    (dirty queue)    (input logic)  Pass                            Provider
-                                                |
-                                                v
-                                     Clay_BeginLayout()
-                                     Walk entity tree
-                                       -> composition emit CLAY() calls
-                                     Clay_EndLayout()
-                                       -> Clay_RenderCommandArray
-                                                |
-                                                v
-                                     ClayRenderable provider
-                                       -> dispatch to renderer backend
-```
+### Per-Entity Property Components
 
-### The Two-System Design
-
-The module registers two ECS systems, not one:
-
-1. **Clay_LayoutSystem** (PreStore phase): Calls `Clay_BeginLayout`, walks the CELS entity tree emitting CLAY() calls, calls `Clay_EndLayout`. Produces `Clay_RenderCommandArray`. This runs every frame because Clay requires a full rebuild.
-
-2. **Clay_RenderSystem** (OnRender phase): The Feature/Provider system. Takes the `Clay_RenderCommandArray` and dispatches it to whatever renderer backend is registered (ncurses, SDL, etc.). This is where the `ClayRenderable` Feature/Provider contract lives.
-
-**Why two systems, not one?** Separation of layout computation from rendering enables:
-- Multiple renderer backends without changing layout logic
-- Dirty-checking at the render level (skip render if command array unchanged)
-- Clear phase ordering: layout completes before any rendering begins
-
-## Component Boundaries
-
-| Component | Responsibility | Communicates With |
-|-----------|---------------|-------------------|
-| **Clay_Engine** (module facade) | Single entry point, bundles Layout + Render systems, owns Clay arena | CELS core (module registration), Clay library |
-| **Clay_Layout** (layout system) | Clay_BeginLayout/EndLayout, entity tree walking, CLAY() emission | CELS core (entity queries, composition data), Clay library |
-| **Clay_Render** (render provider) | Feature/Provider registration, render command dispatch | CELS core (Feature/Provider API), renderer backends |
-| **Clay_Arena** (arena manager) | Clay_Arena lifecycle: create, resize on window change, destroy | Clay library, window state |
-| **Clay_TextMeasure** (text callback) | Clay_SetMeasureTextFunction bridge | Clay library, renderer backend (font system) |
-
-## Frame Pipeline: Detailed Timing
-
-### Phase 1: OnLoad -- Lifecycle + Input (CELS core, unchanged)
-
-```
-CELS_LifecycleSystem:
-  - Evaluates lifecycle conditions (MainMenuVisible, etc.)
-  - Enables/disables entities based on visibility
-  - Deletes entities when destroy conditions met
-
-TUI_InputSystem (or other backend input):
-  - Reads platform input
-  - Populates CELS_Input struct
-```
-
-No Clay involvement here. This is standard CELS.
-
-### Phase 2: PostLoad -- Recomposition (CELS core, unchanged)
-
-```
-CELS_RecompositionSystem:
-  - Processes dirty_queue (compositions whose observed state changed)
-  - For each dirty composition:
-    1. Delete old child entities
-    2. Re-execute factory function with stored props
-    3. New entities created with updated component data
-  - Compositions with CEL_Watch(SomeState) re-run here
-```
-
-Critical interaction: When a composition re-runs during recomposition, it emits `CEL_Has(ClayUI, ...)` to mark entities as Clay-backed. But it does NOT emit CLAY() calls yet -- those happen in the layout phase.
-
-### Phase 3: OnUpdate -- Application Systems (app code, unchanged)
-
-```
-MainMenuInputSystem, SettingsInputSystem, etc.:
-  - Read CELS_Input
-  - Modify state via CEL_Update(SomeState)
-  - State changes trigger cels_state_notify_change()
-  - Compositions are queued for recomposition NEXT frame
-```
-
-### Phase 4: PreStore -- Clay Layout Pass (NEW, cels-clay)
-
-```
-Clay_LayoutSystem:
-  1. Clay_SetLayoutDimensions(window_width, window_height)
-  2. Clay_BeginLayout()
-  3. Walk entity tree in depth-first order:
-     For each entity with ClayUI component:
-       a. Look up the entity's composition factory + stored ClayUI data
-       b. Call the entity's clay_layout_fn(props, entity_id)
-          - This function emits CLAY() macro calls
-          - Children are walked recursively inside CLAY() blocks
-  4. commands = Clay_EndLayout()
-  5. Store commands pointer for render system
-```
-
-**Why PreStore?** It runs after OnUpdate (state is settled) but before OnStore/OnRender (rendering needs the layout). PreStore is the correct slot for "prepare data that renderers will consume."
-
-### Phase 5: OnRender -- Clay Render Provider (NEW, cels-clay)
-
-```
-Clay_RenderSystem (via Feature/Provider):
-  1. Retrieve Clay_RenderCommandArray from layout system
-  2. Iterate commands:
-     For each Clay_RenderCommand:
-       - Switch on commandType
-       - Call renderer backend callback with command data
-  3. Renderer backend does actual drawing
-```
-
-This is where the Feature/Provider pattern applies. The cels-clay module defines `CEL_DefineFeature(ClayRenderable)` and registers the layout-to-render bridge. Renderer backends (cels-ncurses, SDL, etc.) provide the actual rendering implementation.
-
-## Entity-Backed Clay Blocks
-
-### The ClayUI Component
+Each entity type has a tailored component struct:
 
 ```c
-CEL_Define(ClayUI, {
-    void (*layout_fn)(void* props, cels_entity_t entity_id);
-    // The function that emits CLAY() calls for this entity's UI subtree
-});
+CEL_Component(RowProps) {
+    uint16_t gap;
+    Clay_Padding padding;
+    Clay_SizingAxis width, height;
+    Clay_ChildAlignment_x main_align;
+    Clay_ChildAlignment_y cross_align;
+    Clay_Color bg;
+    bool clip;
+};
+
+CEL_Component(ColumnProps) { /* same fields, axes swapped */ };
+CEL_Component(BoxProps)    { /* + border, corner_radius */ };
+CEL_Component(TextProps)   { /* text, color, font_size, wrap, etc. */ };
+CEL_Component(SpacerProps) { /* width, height only */ };
+CEL_Component(ImageProps)  { /* source, dimensions, bg */ };
 ```
 
-Every composition that has UI defines a `layout_fn` alongside its normal CELS composition body. The composition body creates ECS entities with components. The `layout_fn` emits Clay element declarations.
+### Entity Type Discovery
 
-### Composition Pattern: CELS + Clay Hybrid
+The layout walker checks component presence to determine entity type:
 
 ```c
-// The composition creates entities (ECS side)
-CEL_Composition(Sidebar, int width;) {
-    CEL_Has(ClayUI, .layout_fn = Sidebar_layout);
-    // Children are also compositions with ClayUI
-    CEL_Call(NavButton, .label = "Home") {}
-    CEL_Call(NavButton, .label = "Settings") {}
+if (cel_get(RowProps))         → emit CLAY({LEFT_TO_RIGHT, ...}) { children }
+else if (cel_get(ColumnProps)) → emit CLAY({TOP_TO_BOTTOM, ...}) { children }
+else if (cel_get(BoxProps))    → emit CLAY({...}) { children }
+else if (cel_get(TextProps))   → emit CLAY_TEXT(...)
+else if (cel_get(SpacerProps)) → emit CLAY({sizing}) {}
+else if (cel_get(ImageProps))  → emit CLAY({.image = ...}) {}
+else                           → transparent passthrough (emit children directly)
+```
+
+### Compositions
+
+Each primitive is a CELS composition following the proven pattern:
+
+```c
+CEL_Define_Composition(Row, /* fields = RowProps fields */);
+
+CEL_Composition(Row) {
+    cel_has(RowProps,
+        .gap = props.gap,
+        .padding = props.padding,
+        .width = props.width,
+        .height = props.height,
+        .main_align = props.main_align,
+        .cross_align = props.cross_align,
+        .bg = props.bg,
+        .clip = props.clip
+    );
 }
 
-// The layout function emits Clay calls (layout side)
-static void Sidebar_layout(void* props, cels_entity_t entity_id) {
-    CLAY(CLAY_ID("Sidebar"), {
-        .layout = { .sizing = { CLAY_SIZING_FIXED(200), CLAY_SIZING_GROW() } }
-    }) {
-        // Walk children and call their layout_fns
-        clay_emit_children(entity_id);
-    }
+#define Row(...) cel_init(Row, __VA_ARGS__)
+```
+
+Developer usage:
+```c
+Row(.gap = 2, .padding = CLAY_PADDING_ALL(1)) {
+    Text(.text = "Hello", .color = (Clay_Color){255,255,255,255}) {}
+    Spacer() {}
+    Text(.text = "World") {}
 }
 ```
 
-### Entity Tree Walking Order
+## Frame Pipeline
 
-The layout system walks the ECS entity hierarchy in **parent-before-child** (depth-first preorder) to match Clay's nesting requirement. CLAY() blocks must be opened before children are declared inside them.
+### System Phases
 
-**Algorithm:**
+| Phase | System | Responsibility |
+|-------|--------|---------------|
+| OnLoad | (app systems) | Read input, update state |
+| (reactive) | CELS recomposition | Dirty compositions re-execute, entity tree updated |
+| OnUpdate | (app systems) | Process input, mutate state via `cel_update()` |
+| PreStore | `ClayLayoutSystem` | `Clay_BeginLayout` → walk entity tree → `Clay_EndLayout` |
+| OnRender | `Clay_NCursesRenderSystem` OR `Clay_SDL3RenderSystem` | Consume render commands, draw to backend |
+
+### Layout System (PreStore)
 
 ```
-function emit_clay_tree(entity_id):
-    clay_ui = get_component(entity_id, ClayUI)
-    if clay_ui is NULL:
-        return
-
-    // Entity's layout function opens CLAY() block and calls clay_emit_children
-    clay_ui.layout_fn(get_props(entity_id), entity_id)
-
-function clay_emit_children(parent_entity_id):
-    children = get_children(parent_entity_id)  // flecs parent-child query
-    sort children by creation order (or explicit order component)
-    for each child in children:
-        if child has ClayUI component:
-            emit_clay_tree(child)
+Clay_SetLayoutDimensions(surface_width, surface_height)
+Clay_BeginLayout()
+    for each root entity with ClaySurface:
+        walk_entity_tree(entity):
+            check component type (Row/Column/Box/Text/Spacer/Image)
+            emit corresponding CLAY() call
+            recursively walk children
+Clay_EndLayout() → returns Clay_RenderCommandArray
+store render commands for OnRender consumption
 ```
 
-**Why flecs parent-child?** CELS compositions already create parent-child entity relationships via `cels_begin_entity` / `cels_end_entity`. The entity tree IS the UI tree. No separate tree structure needed.
+The tree walk is the same depth-first parent-before-child algorithm from v0.5. The only change is reading property components instead of calling layout function pointers.
 
-**Lifecycle filtering:** Disabled entities (from CELS lifecycle system) are automatically excluded from flecs queries. A suspended lifecycle's entities will not appear in the tree walk, so their CLAY() calls are never emitted. This is how CELS reactivity controls Clay layout participation.
+### Render System (OnRender)
 
-### Root Entity
+One of two systems runs based on which renderer module was registered:
 
-The root composition creates a root entity with `ClayUI` whose `layout_fn` is the entry point for the entire Clay tree. The layout system finds all root-level `ClayUI` entities (those without a parent ClayUI entity) and starts the walk from there.
+**NCurses path:**
+```
+Clay_NCursesRenderSystem:
+    get Clay_RenderCommandArray
+    for each command:
+        switch(command.type):
+            RECTANGLE → tui_draw_fill_rect()
+            TEXT → tui_draw_text()
+            BORDER → tui_draw_border()
+            SCISSOR → tui_push_scissor() / tui_pop_scissor()
+```
 
-## Integration with CELS Reactive Recomposition
+**SDL3 path:**
+```
+Clay_SDL3RenderSystem:
+    get Clay_RenderCommandArray
+    for each command:
+        switch(command.type):
+            RECTANGLE → SDL_RenderFillRect()
+            TEXT → TTF_RenderText() + SDL_RenderTexture()
+            BORDER → SDL_RenderRect() (per side)
+            SCISSOR → SDL_SetRenderClipRect()
+            IMAGE → SDL_RenderTexture()
+```
 
-### The Key Insight
+## Module Architecture
 
-CELS reactivity and Clay's immediate-mode rebuild are **complementary, not conflicting**:
+### Registration Pattern
 
-- **Clay rebuilds every frame** -- it must, that is how immediate-mode layout works
-- **CELS compositions only re-run when state changes** -- but the layout functions read the *current* component data, which reflects whatever recomposition produced
-- **The flow:** State change -> recomposition (PostLoad) -> entities updated -> layout pass reads updated entities (PreStore) -> Clay gets correct tree
-
-### What "Reactive" Means in This Context
-
-When `CEL_Update(MenuState)` triggers a recomposition:
-
-1. **PostLoad:** `MenuRouter` composition re-runs. It conditionally calls different child compositions based on `MenuState.screen`. Old children are deleted, new children are created with `ClayUI` components.
-
-2. **PreStore:** Layout system walks entity tree. The new children have different `ClayUI.layout_fn` callbacks. Clay sees a different element tree. Layout computes new positions/sizes.
-
-3. **OnRender:** Renderer draws the new layout.
-
-### Compositions That Watch State
-
-Compositions that use `CEL_Watch(SomeState)` get re-run when that state changes. During re-run:
-- Old child entities are deleted (their `ClayUI` layout functions go away)
-- New child entities are created (possibly different children, same children with different props, or different arrangement)
-- Next frame's layout pass sees the updated entity tree
-
-### No Double Layout
-
-There is exactly one `Clay_BeginLayout`/`Clay_EndLayout` pair per frame. All compositions contribute to this single pass. CELS recomposition happens BEFORE the layout pass (PostLoad before PreStore), so by the time layout runs, all entities have their final state for this frame.
-
-## The Rendering Bridge: ClayRenderable Feature/Provider
-
-### Feature Definition
+Following cels-sdl3/cels-ncurses module pattern:
 
 ```c
-// In cels-clay module:
-CEL_DefineFeature(ClayRenderable, .phase = CELS_Phase_OnRender);
+// Core module (always registered)
+CEL_Module(Clay_Engine) {
+    cels_register(ClayLayoutSystem);
+    cels_register(ClaySurface);
+    cels_register(RowProps, ColumnProps, BoxProps, TextProps, SpacerProps, ImageProps);
+    // State, lifecycle for arena management
+}
+
+// Renderer modules (developer picks one)
+CEL_Module(Clay_NCurses) {
+    cels_register(Clay_NCursesRenderSystem);
+    cels_register(Clay_NCursesTextMeasure);
+}
+
+CEL_Module(Clay_SDL3) {
+    cels_register(Clay_SDL3RenderSystem);
+    cels_register(Clay_SDL3TextMeasure);
+}
 ```
 
-### Provider Contract
-
-Renderer backends implement the `ClayRenderable` provider:
-
+Developer app:
 ```c
-// In cels-ncurses (or cels-sdl, etc.):
-CEL_Feature(ClayUI, ClayRenderable);
-CEL_Provides(TUI, ClayRenderable, ClayUI, tui_clay_render_callback);
-```
+CEL_Build {
+    cels_register(NCurses);       // terminal backend
+    cels_register(Clay_Engine);   // core layout
+    cels_register(Clay_NCurses);  // terminal renderer for Clay
 
-### Data Flow Through the Callback
-
-The render callback receives the `Clay_RenderCommandArray` via a module-global pointer:
-
-```c
-// Set by Clay_LayoutSystem after Clay_EndLayout():
-static Clay_RenderCommandArray g_clay_commands = {0};
-
-// Read by render provider callback:
-static void tui_clay_render_callback(CELS_Iter* it) {
-    for (int i = 0; i < g_clay_commands.length; i++) {
-        Clay_RenderCommand* cmd = Clay_RenderCommandArray_Get(&g_clay_commands, i);
-        switch (cmd->commandType) {
-            case CLAY_RENDER_COMMAND_TYPE_RECTANGLE:
-                // Draw rectangle using backend primitives
-                break;
-            case CLAY_RENDER_COMMAND_TYPE_TEXT:
-                // Draw text using backend primitives
-                break;
-            case CLAY_RENDER_COMMAND_TYPE_BORDER:
-                // Draw border using backend primitives
-                break;
-            case CLAY_RENDER_COMMAND_TYPE_SCISSOR_START:
-                // Push clip region
-                break;
-            case CLAY_RENDER_COMMAND_TYPE_SCISSOR_END:
-                // Pop clip region
-                break;
-            // ...
+    NCursesWindow(.title = "App", .fps = 30) {
+        ClaySurface(.width = 80, .height = 24) {
+            // UI compositions here
         }
     }
 }
 ```
 
-### Text Measurement
-
-Clay requires a `Clay_SetMeasureTextFunction` callback to compute text dimensions. This is renderer-dependent (ncurses measures in character cells, SDL in pixels). The renderer backend module provides this callback during initialization.
-
-**cels-clay provides a hook point:**
+### State Singletons
 
 ```c
-typedef Clay_Dimensions (*Clay_MeasureTextFn)(
-    Clay_StringSlice text,
-    Clay_TextElementConfig* config,
-    void* userData
-);
-
-void Clay_Engine_set_measure_text(Clay_MeasureTextFn fn, void* userData);
+CEL_Define_State(ClayEngineState) {
+    bool initialized;
+    float layout_width, layout_height;
+    Clay_RenderCommandArray render_commands;
+};
 ```
 
-The renderer backend calls this during its init. The cels-clay module forwards it to `Clay_SetMeasureTextFunction`.
-
-## Clay Arena Lifecycle
-
-### Who Owns the Arena
-
-The **Clay_Engine module** (cels-clay) owns the Clay_Arena. It is NOT owned by the renderer backend or the application.
+Registered via cross-TU pointer registry (same pattern as `SDL3_ContextState`, `NCurses_WindowState`).
 
 ### Lifecycle
 
-```
-Clay_Engine_use() called in CEL_Build:
-  1. Calculate arena size: Clay_MinMemorySize()
-  2. Allocate memory: malloc(arena_size)
-  3. Create arena: Clay_CreateArenaWithCapacityAndMemory(size, memory)
-  4. Initialize Clay: Clay_Initialize(arena, dimensions, error_handler)
-  5. Set initial layout dimensions from window config
-
-Window resize (detected via WindowState observation):
-  6. Clay_SetLayoutDimensions(new_width, new_height)
-  (Arena is NOT reallocated -- Clay handles this internally)
-
-Shutdown:
-  7. free(arena.memory)
-  (No Clay_Destroy -- Clay has no teardown function in v0.14)
-```
-
-### Relation to CELS Lifecycle
-
-The Clay arena lives for the entire application lifetime, created during `CEL_Build` and freed at process exit. It is NOT tied to any CELS lifecycle -- it persists through all screen transitions, recompositions, and state changes. The arena is Clay's internal working memory, not a per-frame allocation.
-
-### Arena Sizing
-
-Clay_MinMemorySize() returns the minimum required arena size based on the current max element count and text cache settings. Default is ~1MB. For larger UIs:
-
 ```c
-Clay_SetMaxElementCount(8192);       // Default: 8192
-Clay_SetMaxMeasureTextCacheWordCount(16384);  // Default: 16384
-uint32_t size = Clay_MinMemorySize();
-```
-
-These must be called BEFORE Clay_MinMemorySize() / Clay_Initialize().
-
-## Module Structure
-
-### File Layout
-
-```
-cels-clay/
-  CMakeLists.txt                    # INTERFACE library definition
-  include/
-    cels-clay/
-      clay_engine.h                 # Module facade: Clay_Engine_use(), Clay_EngineConfig
-      clay_layout.h                 # Layout system: ClayUI component, tree walking API
-      clay_render.h                 # Render provider: ClayRenderable feature, provider hooks
-  src/
-    clay_engine.c                   # CEL_DefineModule(Clay_Engine), arena lifecycle
-    clay_layout.c                   # Layout system: BeginLayout, tree walk, EndLayout
-    clay_render.c                   # Feature/Provider registration, render dispatch
-```
-
-### Headers vs Sources
-
-**Headers (public API surface):**
-- `clay_engine.h`: `Clay_EngineConfig`, `Clay_EngineContext`, `Clay_Engine_use()`, `Clay_Engine_init()`
-- `clay_layout.h`: `ClayUI` component definition (CEL_Define), `clay_emit_children()` helper, layout system registration
-- `clay_render.h`: `ClayRenderable` feature declaration, `Clay_Engine_set_measure_text()` hook, render command accessor
-
-**Sources (implementation):**
-- `clay_engine.c`: Module init, arena allocation, Clay_Initialize, window resize handling
-- `clay_layout.c`: Layout system registered at PreStore, entity tree walking, CLAY() emission coordination
-- `clay_render.c`: Feature/Provider definitions, render system callback, command array forwarding
-
-### Public API Surface
-
-```c
-// --- clay_engine.h ---
-
-// Configuration for Clay_Engine_use()
-typedef struct Clay_EngineConfig {
-    int max_element_count;      // 0 = default (8192)
-    int max_text_cache_words;   // 0 = default (16384)
-} Clay_EngineConfig;
-
-// Context passed to callbacks
-typedef struct Clay_EngineContext {
-    cels_entity_t clay_state_id;  // Observable: Clay_State (layout dimensions, error count)
-} Clay_EngineContext;
-
-// Module entry point
-extern void Clay_Engine_use(Clay_EngineConfig config);
-extern void Clay_Engine_init(void);
-extern cels_entity_t Clay_Engine;
-
-// --- clay_layout.h ---
-
-// The ClayUI ECS component (defined via CEL_Define in the header)
-// layout_fn: called during the layout pass to emit CLAY() calls
-// Compositions attach this to mark themselves as Clay-backed
-CEL_Define(ClayUI, {
-    void (*layout_fn)(void* props, cels_entity_t entity_id);
-});
-
-// Helper: emit Clay layout calls for all ClayUI children of an entity
-extern void clay_emit_children(cels_entity_t parent_entity_id);
-
-// Layout system initialization (called by Clay_Engine module)
-extern void clay_layout_init(void);
-
-// --- clay_render.h ---
-
-// Text measurement hook (called by renderer backends)
-extern void clay_render_set_measure_text(
-    Clay_Dimensions (*fn)(Clay_StringSlice, Clay_TextElementConfig*, void*),
-    void* userData
-);
-
-// Access render commands (called by renderer provider callbacks)
-extern Clay_RenderCommandArray clay_render_get_commands(void);
-
-// Render system initialization (called by Clay_Engine module)
-extern void clay_render_init(void);
-```
-
-## Integration Pattern: How cels-clay Fits with cels-ncurses
-
-The cels-clay module does NOT replace cels-ncurses. They compose together:
-
-```
-Application code:
-  CEL_Build(App) {
-      // Use TUI_Engine for window/input/frame loop (from cels-ncurses)
-      TUI_Engine_use((TUI_EngineConfig){
-          .title = "My App",
-          .fps = 60,
-          .root = AppUI
-      });
-
-      // Use Clay_Engine for layout computation (from cels-clay)
-      Clay_Engine_use((Clay_EngineConfig){
-          .max_element_count = 4096
-      });
-
-      // The renderer backend bridges Clay commands to ncurses drawing
-      // (could be in cels-ncurses as an additional provider,
-      //  or in a separate cels-ncurses-clay bridge module)
-  }
-```
-
-The window provider (cels-ncurses) owns the frame loop. The layout system (cels-clay) runs inside `Engine_Progress` at PreStore. The render provider runs at OnRender. The renderer backend (TUI Clay provider) maps Clay_RenderCommands to ncurses draw calls.
-
-## Patterns to Follow
-
-### Pattern 1: INTERFACE Library
-
-Same as cels-ncurses -- all source files compile in the consumer's translation unit. No separate .so/.a.
-
-```cmake
-add_library(cels-clay INTERFACE)
-target_sources(cels-clay INTERFACE
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/clay_engine.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/clay_layout.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/clay_render.c
-)
-target_include_directories(cels-clay INTERFACE
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
-)
-target_link_libraries(cels-clay INTERFACE cels)
-# Clay is a single-header library -- consumer includes it directly
-```
-
-### Pattern 2: Module Facade
-
-```c
-CEL_DefineModule(Clay_Engine) {
-    // Allocate and initialize Clay arena
-    clay_arena_init(g_clay_config);
-
-    // Register layout system (PreStore phase)
-    clay_layout_init();
-
-    // Register render feature/provider framework
-    clay_render_init();
+CEL_Lifecycle(ClayEngineLC);
+CEL_Observe(ClayEngineLC, on_create) {
+    // Initialize Clay arena, set error handler
+    clay_arena_init(config);
+    Clay_Initialize(arena, config, error_handler);
+}
+CEL_Observe(ClayEngineLC, on_destroy) {
+    // Free Clay arena
+    clay_arena_free();
 }
 ```
 
-### Pattern 3: Composition + Layout Function Pairing
-
-Every composition that participates in Clay layout has two functions:
-1. **Composition body** (CEL_Composition): Creates ECS entities, attaches components
-2. **Layout function** (static): Emits CLAY() calls during layout pass
-
-The composition body sets `ClayUI.layout_fn` to point at the layout function. This pairing is the fundamental integration contract.
-
-## Anti-Patterns to Avoid
-
-### Anti-Pattern 1: CLAY() Inside Composition Body
-
-**What:** Calling CLAY() macros directly inside a `CEL_Composition()` body.
-**Why bad:** Compositions run during recomposition (PostLoad), but Clay_BeginLayout has not been called yet. CLAY() calls outside BeginLayout/EndLayout are undefined behavior.
-**Instead:** Separate the layout function. The composition body only attaches the `ClayUI` component with a function pointer.
-
-### Anti-Pattern 2: Storing Clay IDs in Components
-
-**What:** Saving `Clay_ElementId` in ECS components and trying to reuse them across frames.
-**Why bad:** Clay rebuilds the entire tree every frame. Element IDs are recomputed from strings each frame. Stored IDs from a previous frame are meaningless.
-**Instead:** Use CLAY_ID("literal") or CLAY_IDI("literal", index) fresh each frame in layout functions.
-
-### Anti-Pattern 3: Multiple Clay_BeginLayout/EndLayout Per Frame
-
-**What:** Each composition calling its own BeginLayout/EndLayout.
-**Why bad:** Clay has ONE global tree per frame. Multiple Begin/End pairs would create multiple independent layouts, not a single composed tree.
-**Instead:** ONE BeginLayout at the start of the layout system, ONE EndLayout at the end. All compositions contribute to the same tree.
-
-### Anti-Pattern 4: Conditional CLAY() Calls Based on Runtime State in Layout Functions
-
-**What (subtle):** Reading CELS state directly in layout functions to decide whether to emit CLAY() blocks.
-**Why tricky:** This is actually fine and expected -- layout functions SHOULD branch on state. The anti-pattern is reading state that the composition does NOT observe via CEL_Watch. If state changes but the composition does not recompose, the layout function will still be called with stale component data.
-**Instead:** Ensure any state that affects layout is either:
-- Passed through ClayUI component data (updated by recomposition), or
-- Read from ECS components that are updated by systems (outside recomposition)
-
-## Scalability Considerations
-
-| Concern | 100 elements | 1K elements | 10K elements |
-|---------|--------------|-------------|--------------|
-| Arena size | ~1MB (default) | ~2MB | ~8MB (bump max_element_count) |
-| Layout computation | <1ms | ~2ms | ~5-10ms |
-| Entity tree walk | Negligible | ~0.5ms | ~2ms (optimize with cached child lists) |
-| Text measurement cache | Default 16K words | Sufficient | May need bump |
-
-## Build Order (Dependencies Between Components)
-
-### Phase 1: Clay_Layout (foundation)
-
-- `ClayUI` component definition
-- Entity tree walking (`clay_emit_children`)
-- Layout system registration (PreStore phase)
-- No renderer dependency -- can test with Clay debug view
-- **Depends on:** CELS core only
-
-### Phase 2: Clay_Render (rendering bridge)
-
-- `ClayRenderable` feature definition
-- Render command accessor API
-- Provider registration framework
-- **Depends on:** Phase 1 (layout produces commands)
-
-### Phase 3: Clay_Engine (module facade)
-
-- Arena lifecycle management
-- Module bundling (Layout + Render)
-- Window state observation for resize
-- Text measurement hook point
-- **Depends on:** Phases 1 + 2
-
-### Phase 4: Backend Integration (separate module or extension)
-
-- Concrete renderer implementations (ncurses, SDL, etc.)
-- Text measurement function implementations
-- **Depends on:** Phase 3 + specific backend module
-
-## Data Flow Summary
+## Data Flow
 
 ```
-State change (CEL_Update)
-  |
-  v
-cels_state_notify_change() -- marks compositions dirty
-  |
-  v
-[Next frame]
-  |
-  v
-OnLoad: Lifecycle evaluation (enable/disable entities)
-  |
-  v
-PostLoad: Recomposition (re-run dirty compositions, update entity tree)
-  |
-  v
-OnUpdate: App systems (read input, modify state for next frame)
-  |
-  v
-PreStore: Clay_LayoutSystem
-  |-- Clay_SetLayoutDimensions(width, height)
-  |-- Clay_BeginLayout()
-  |-- Walk entity tree (depth-first, parent-before-child)
-  |     |-- For each entity with ClayUI:
-  |           |-- Call layout_fn(props, entity_id)
-  |           |     |-- Emits CLAY() macro calls
-  |           |     |-- Inside CLAY() block: clay_emit_children(entity_id)
-  |           |           |-- Recursively walk children
-  |-- Clay_EndLayout() -> Clay_RenderCommandArray
-  |-- Store commands for render system
-  |
-  v
-OnRender: Clay_RenderSystem (Feature/Provider)
-  |-- Retrieve Clay_RenderCommandArray
-  |-- Provider callback iterates commands
-  |     |-- RECTANGLE -> backend draw rect
-  |     |-- TEXT -> backend draw text
-  |     |-- BORDER -> backend draw border
-  |     |-- SCISSOR_START -> backend push clip
-  |     |-- SCISSOR_END -> backend pop clip
-  |     |-- CUSTOM -> backend custom handler
-  |
-  v
-[Frame loop: doupdate/present/swap buffers]
+Developer writes:
+    Row(.gap = 2) {
+        Text(.text = "Hello") {}
+        Column() {
+            Text(.text = "A") {}
+            Text(.text = "B") {}
+        }
+    }
+
+CELS creates:
+    Entity 1: RowProps{gap=2}
+        Entity 2: TextProps{text="Hello"}
+        Entity 3: ColumnProps{}
+            Entity 4: TextProps{text="A"}
+            Entity 5: TextProps{text="B"}
+
+Layout system emits:
+    CLAY({LEFT_TO_RIGHT, gap=2}) {
+        CLAY_TEXT("Hello", config)
+        CLAY({TOP_TO_BOTTOM}) {
+            CLAY_TEXT("A", config)
+            CLAY_TEXT("B", config)
+        }
+    }
+
+Clay produces:
+    RenderCommand[0]: RECTANGLE (row background)
+    RenderCommand[1]: TEXT "Hello" at (x1,y1)
+    RenderCommand[2]: RECTANGLE (column background)
+    RenderCommand[3]: TEXT "A" at (x2,y2)
+    RenderCommand[4]: TEXT "B" at (x3,y3)
+
+Renderer draws:
+    NCurses: tui_draw_fill_rect(), tui_draw_text(), ...
+    SDL3:    SDL_RenderFillRect(), TTF_RenderText(), ...
 ```
 
-## Sources
+## Renderer Coexistence
 
-- Clay v0.14 header: `/home/cachy/workspaces/libs/clay/clay.h` (direct analysis)
-- Clay SDL3 example: `/home/cachy/workspaces/libs/clay/examples/SDL3-simple-demo/main.c` (integration pattern)
-- CELS runtime: `/home/cachy/workspaces/libs/cels/src/cels.cpp` (recomposition system, phase mapping)
-- CELS API: `/home/cachy/workspaces/libs/cels/include/cels/cels.h` (macro definitions, Feature/Provider API)
-- cels-ncurses architecture: `/home/cachy/workspaces/libs/cels/modules/cels-ncurses/.planning/codebase/ARCHITECTURE.md`
-- cels-ncurses structure: `/home/cachy/workspaces/libs/cels/modules/cels-ncurses/.planning/codebase/STRUCTURE.md`
-- cels-ncurses integrations: `/home/cachy/workspaces/libs/cels/modules/cels-ncurses/.planning/codebase/INTEGRATIONS.md`
-- cels-ncurses research architecture: `/home/cachy/workspaces/libs/cels/modules/cels-ncurses/.planning/research/ARCHITECTURE.md`
-- App example: `/home/cachy/workspaces/libs/cels/examples/app.c` (composition/state/lifecycle usage)
+### Conditional Compilation
+
+```cmake
+# In cels-clay CMakeLists.txt
+if(TARGET cels-ncurses)
+    target_sources(cels-clay INTERFACE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/renderers/clay_ncurses_renderer.c
+    )
+endif()
+
+if(TARGET cels-sdl3)
+    target_sources(cels-clay INTERFACE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/renderers/clay_sdl3_renderer.c
+    )
+endif()
+```
+
+### Text Measurement Ownership
+
+Critical: Clay has ONE global text measurement callback. The renderer that is registered sets it:
+
+- `Clay_NCurses` sets cell-based measurement (1 char = 1 unit width)
+- `Clay_SDL3` sets TTF-based measurement (actual pixel widths from font metrics)
+
+The text measurement callback must be set BEFORE the layout pass (PreStore). The renderer module's init observer handles this.
+
+### Mutual Exclusion
+
+Only one renderer module should be registered. If both are registered, the last one wins (its text measurement callback overwrites the previous). This is acceptable — document that registering both is undefined behavior.
+
+## File Structure (Proposed)
+
+```
+cels-clay/
+├── CMakeLists.txt
+├── include/cels-clay/
+│   ├── clay_engine.h          # CEL_Module(Clay_Engine), state, lifecycle
+│   ├── clay_primitives.h      # Row, Column, Box, Text, Spacer, Image compositions + props
+│   ├── clay_surface.h         # ClaySurface composition
+│   ├── clay_ncurses.h         # CEL_Module(Clay_NCurses) — renderer module
+│   └── clay_sdl3.h            # CEL_Module(Clay_SDL3) — renderer module
+├── src/
+│   ├── clay_impl.c            # CLAY_IMPLEMENTATION (unchanged)
+│   ├── clay_engine.c          # Module init, arena, state singleton
+│   ├── clay_layout.c          # Layout system — property-driven tree walk
+│   ├── clay_primitives.c      # Composition definitions for Row, Column, etc.
+│   └── renderers/
+│       ├── clay_ncurses_renderer.c  # NCurses render system
+│       └── clay_sdl3_renderer.c     # SDL3 render system
+└── examples/
+    └── minimal/
+        ├── main_ncurses.c     # NCurses example
+        └── main_sdl3.c        # SDL3 example
+```
+
+## Build Order (Phase Dependencies)
+
+1. **Module refactor** — CEL_Module, lifecycle, state singletons (foundation)
+2. **Property components** — RowProps, ColumnProps, BoxProps, TextProps, SpacerProps (no render needed)
+3. **Layout system rewrite** — Property-driven tree walk (can test with existing ncurses renderer)
+4. **ClaySurface adaptation** — Wire to new layout system
+5. **NCurses renderer migration** — Port existing code to new module pattern
+6. **SDL3 renderer** — New implementation using Clay's SDL3 renderer as reference
+7. **ImageProps** — Needs SDL3 renderer to be meaningful
+8. **Renderer selection** — Module registration wiring
+9. **Minimal example** — Dual-backend demo app
+
+## Key Risks
+
+1. **Entity type dispatch overhead** — 6 component checks per entity per frame. Mitigated: ECS archetype queries are O(1) component lookups.
+2. **Text measurement conflict** — Two renderers, one callback slot. Mitigated: last-registered wins, document single-renderer-only.
+3. **SDL3 renderer state access** — Need SDL_Renderer/TTF_Font from cels-sdl3. May need cels-sdl3 to expose these via state singleton.
+4. **INTERFACE library multi-TU** — Same issues as v0.5 with static/extern linkage. Apply proven solutions from v0.5 experience.
 
 ---
-*Architecture research: 2026-02-07*
+*Researched: 2026-03-15*
