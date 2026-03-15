@@ -1,7 +1,7 @@
 # Requirements: cels-clay v0.6
 
 **Defined:** 2026-03-15
-**Core Value:** Declarative UI development where developers build interfaces by composing entities with layout properties — CELS handles state and reactivity, Clay handles layout math, and the renderer is a pluggable detail.
+**Core Value:** Declarative UI development where developers build interfaces by composing entities with layout properties -- CELS handles state and reactivity, Clay handles layout math, and the renderer is a pluggable detail.
 
 ## v1 Requirements
 
@@ -39,7 +39,7 @@
 - [ ] **REND-06**: SDL3 scissor/clipping support (SDL_SetRenderClipRect)
 - [ ] **REND-07**: SDL3 image rendering (SDL_RenderTexture from imageData pointer)
 - [ ] **REND-08**: Renderer selection via module registration (cels_register(Clay_NCurses) or cels_register(Clay_SDL3))
-- [ ] **REND-09**: Conditional compilation — renderers compile only when backend target exists
+- [ ] **REND-09**: Conditional compilation -- renderers compile only when backend target exists
 
 ### Example App
 
@@ -86,46 +86,46 @@
 | Multi-window / multi-surface | One ClaySurface per app is correct for v0.6 |
 | Wrapping Clay macros (CELS_SIZING_GROW) | Property structs use Clay types directly |
 | True color NCurses | 8/16-color sufficient; design for future expansion |
-| Layout functions in v0.6 | Pure entity model — layout functions deferred to v2 API-03 |
+| Layout functions in v0.6 | Pure entity model -- layout functions deferred to v2 API-03 |
 
 ## Traceability
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| MOD-01 | Phase 1 | Pending |
-| MOD-02 | Phase 1 | Pending |
-| MOD-03 | Phase 1 | Pending |
-| MOD-04 | Phase 1 | Pending |
-| MOD-05 | Phase 1 | Pending |
-| PRIM-01 | Phase 2 | Pending |
-| PRIM-02 | Phase 2 | Pending |
-| PRIM-03 | Phase 2 | Pending |
-| PRIM-04 | Phase 2 | Pending |
-| PRIM-05 | Phase 2 | Pending |
-| PRIM-06 | Phase 2 | Pending |
-| LAYOUT-01 | Phase 3 | Pending |
-| LAYOUT-02 | Phase 3 | Pending |
-| LAYOUT-03 | Phase 3 | Pending |
-| LAYOUT-04 | Phase 3 | Pending |
-| REND-01 | Phase 4 | Pending |
-| REND-02 | Phase 5 | Pending |
-| REND-03 | Phase 5 | Pending |
-| REND-04 | Phase 5 | Pending |
-| REND-05 | Phase 5 | Pending |
-| REND-06 | Phase 5 | Pending |
-| REND-07 | Phase 5 | Pending |
-| REND-08 | Phase 4 | Pending |
-| REND-09 | Phase 4 | Pending |
-| DEMO-01 | Phase 6 | Pending |
-| DEMO-02 | Phase 6 | Pending |
-| DEMO-03 | Phase 6 | Pending |
-| DEMO-04 | Phase 6 | Pending |
+| MOD-01 | Phase 6 | Pending |
+| MOD-02 | Phase 6 | Pending |
+| MOD-03 | Phase 6 | Pending |
+| MOD-04 | Phase 6 | Pending |
+| MOD-05 | Phase 6 | Pending |
+| PRIM-01 | Phase 7 | Pending |
+| PRIM-02 | Phase 7 | Pending |
+| PRIM-03 | Phase 7 | Pending |
+| PRIM-04 | Phase 7 | Pending |
+| PRIM-05 | Phase 7 | Pending |
+| PRIM-06 | Phase 7 | Pending |
+| LAYOUT-01 | Phase 8 | Pending |
+| LAYOUT-02 | Phase 8 | Pending |
+| LAYOUT-03 | Phase 8 | Pending |
+| LAYOUT-04 | Phase 8 | Pending |
+| REND-01 | Phase 9 | Pending |
+| REND-08 | Phase 9 | Pending |
+| REND-09 | Phase 9 | Pending |
+| REND-02 | Phase 10 | Pending |
+| REND-03 | Phase 10 | Pending |
+| REND-04 | Phase 10 | Pending |
+| REND-05 | Phase 10 | Pending |
+| REND-06 | Phase 10 | Pending |
+| REND-07 | Phase 10 | Pending |
+| DEMO-01 | Phase 11 | Pending |
+| DEMO-02 | Phase 11 | Pending |
+| DEMO-03 | Phase 11 | Pending |
+| DEMO-04 | Phase 11 | Pending |
 
 **Coverage:**
 - v1 requirements: 28 total
 - Mapped to phases: 28
-- Unmapped: 0 ✓
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-15*
-*Last updated: 2026-03-15 after initial definition*
+*Last updated: 2026-03-15 after v0.6 roadmap creation*
