@@ -29,6 +29,11 @@ include(FetchContent)
 # Local development override: use a Clay checkout instead of fetching
 set(CLAY_SOURCE_DIR "" CACHE PATH "Path to local Clay source (overrides FetchContent)")
 
+# Auto-detect sibling clay directory
+if(NOT CLAY_SOURCE_DIR AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/../clay/clay.h)
+    set(CLAY_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../clay" CACHE PATH "" FORCE)
+endif()
+
 if(CLAY_SOURCE_DIR)
     # Use local clone for development (e.g., ~/workspaces/libs/clay)
     set(clay_SOURCE_DIR "${CLAY_SOURCE_DIR}")
@@ -129,31 +134,31 @@ endif()
 # ============================================================================
 # Example applications (optional)
 # ============================================================================
-option(CELS_CLAY_BUILD_EXAMPLES "Build cels-clay example applications" OFF)
+option(CELS_CLAY_BUILD_EXAMPLES "Build cels-clay example applications" ON)
 
 if(CELS_CLAY_BUILD_EXAMPLES)
     # NCurses example (requires cels-ncurses)
     if(TARGET cels-ncurses)
-        add_executable(cels-clay-example-ncurses
+        add_executable(main_ncurses
             ${CMAKE_CURRENT_SOURCE_DIR}/examples/minimal/main_ncurses.c
         )
-        target_link_libraries(cels-clay-example-ncurses PRIVATE
+        target_link_libraries(main_ncurses PRIVATE
             cels-clay
         )
-        target_include_directories(cels-clay-example-ncurses PRIVATE
+        target_include_directories(main_ncurses PRIVATE
             ${CMAKE_CURRENT_SOURCE_DIR}/examples/minimal
         )
     endif()
 
     # SDL3 example (requires cels-sdl3)
     if(TARGET cels-sdl3)
-        add_executable(cels-clay-example-sdl3
+        add_executable(main_sdl3
             ${CMAKE_CURRENT_SOURCE_DIR}/examples/minimal/main_sdl3.c
         )
-        target_link_libraries(cels-clay-example-sdl3 PRIVATE
+        target_link_libraries(main_sdl3 PRIVATE
             cels-clay
         )
-        target_include_directories(cels-clay-example-sdl3 PRIVATE
+        target_include_directories(main_sdl3 PRIVATE
             ${CMAKE_CURRENT_SOURCE_DIR}/examples/minimal
         )
     endif()

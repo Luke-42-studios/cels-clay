@@ -127,7 +127,7 @@ static void ClaySurface_impl(ClaySurface_props props) {
  *   }
  */
 #define CEL_Clay(...) \
-    CLAY(_cel_clay_auto_id(__COUNTER__), { __VA_ARGS__ })
+    CLAY(_cel_clay_auto_id(__COUNTER__), __VA_ARGS__)
 
 /* ============================================================================
  * CEL_Clay_Children()

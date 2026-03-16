@@ -50,6 +50,10 @@
  * The linker symbol exists -- we just need the declaration.
  */
 extern Clay_ElementId Clay__HashNumber(const uint32_t offset, const uint32_t seed);
+extern void Clay__OpenElementWithId(Clay_ElementId id);
+extern void Clay__OpenElement(void);
+extern void Clay__ConfigureOpenElement(Clay_ElementDeclaration config);
+extern void Clay__CloseElement(void);
 
 /* ============================================================================
  * Component Registration
@@ -268,7 +272,7 @@ static void emit_container(ecs_world_t* world, ecs_entity_t entity,
     const ClayBorderStyle* border_style = (const ClayBorderStyle*)
         ecs_get_id(world, entity, ClayBorderStyle_id);
 
-    CLAY(_cel_clay_auto_id(0), {
+    Clay_ElementDeclaration decl = {
         .layout = {
             .layoutDirection = config->direction,
             .childGap = config->gap,
@@ -279,13 +283,11 @@ static void emit_container(ecs_world_t* world, ecs_entity_t entity,
             },
             .childAlignment = config->alignment
         },
-        .backgroundColor = config->bg,
-        .clip = config->clip
-            ? (Clay_ClipElementConfig){ .horizontal = true, .vertical = true }
-            : (Clay_ClipElementConfig){0},
-        .border = border_style ? border_style->border : (Clay_BorderElementConfig){0},
-        .cornerRadius = border_style ? border_style->corner_radius : (Clay_CornerRadius){0}
-    }) {
+        .backgroundColor = config->bg
+    };
+    for (CLAY__ELEMENT_DEFINITION_LATCH = (Clay__OpenElementWithId(_cel_clay_auto_id(0)), Clay__ConfigureOpenElement(decl), 0);
+         CLAY__ELEMENT_DEFINITION_LATCH < 1;
+         CLAY__ELEMENT_DEFINITION_LATCH = 1, Clay__CloseElement()) {
         clay_walk_children(world, entity);
     }
 }
@@ -317,20 +319,23 @@ static void emit_text(ecs_world_t* world, ecs_entity_t entity,
 static void emit_spacer(ecs_world_t* world, ecs_entity_t entity,
                           const ClaySpacerConfig* config) {
     (void)world; (void)entity;  /* spacer is a leaf node */
-    CLAY(_cel_clay_auto_id(1), {
+    Clay_ElementDeclaration spacer_decl = {
         .layout = {
             .sizing = {
                 .width = _sizing_or_grow(config->width),
                 .height = _sizing_or_grow(config->height)
             }
         }
-    }) {}
+    };
+    for (CLAY__ELEMENT_DEFINITION_LATCH = (Clay__OpenElementWithId(_cel_clay_auto_id(1)), Clay__ConfigureOpenElement(spacer_decl), 0);
+         CLAY__ELEMENT_DEFINITION_LATCH < 1;
+         CLAY__ELEMENT_DEFINITION_LATCH = 1, Clay__CloseElement()) {}
 }
 
 static void emit_image(ecs_world_t* world, ecs_entity_t entity,
                          const ClayImageConfig* config) {
     (void)world; (void)entity;  /* image is a leaf node */
-    CLAY(_cel_clay_auto_id(2), {
+    Clay_ElementDeclaration img_decl = {
         .layout = {
             .sizing = {
                 .width = _sizing_or_grow(config->width),
@@ -342,7 +347,10 @@ static void emit_image(ecs_world_t* world, ecs_entity_t entity,
         },
         .backgroundColor = config->bg,
         .cornerRadius = config->corner_radius
-    }) {}
+    };
+    for (CLAY__ELEMENT_DEFINITION_LATCH = (Clay__OpenElementWithId(_cel_clay_auto_id(2)), Clay__ConfigureOpenElement(img_decl), 0);
+         CLAY__ELEMENT_DEFINITION_LATCH < 1;
+         CLAY__ELEMENT_DEFINITION_LATCH = 1, Clay__CloseElement()) {}
 }
 
 /* ============================================================================
@@ -641,11 +649,18 @@ static void ClayLayoutSystem_callback(ecs_iter_t* it) {
             /* 4. Walk children inside a TOP_TO_BOTTOM root container.
              * Clay's implicit root uses LEFT_TO_RIGHT (enum default 0),
              * which would arrange widgets horizontally. */
-            CLAY_AUTO_ID({ .layout = {
-                .layoutDirection = CLAY_TOP_TO_BOTTOM,
-                .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_GROW(0) }
-            }}) {
-                clay_walk_children(world, surface);
+            {
+                Clay_ElementDeclaration root_decl = {
+                    .layout = {
+                        .layoutDirection = CLAY_TOP_TO_BOTTOM,
+                        .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_GROW(0) }
+                    }
+                };
+                for (CLAY__ELEMENT_DEFINITION_LATCH = (Clay__OpenElement(), Clay__ConfigureOpenElement(root_decl), 0);
+                     CLAY__ELEMENT_DEFINITION_LATCH < 1;
+                     CLAY__ELEMENT_DEFINITION_LATCH = 1, Clay__CloseElement()) {
+                    clay_walk_children(world, surface);
+                }
             }
 
             /* 5. End layout pass */
