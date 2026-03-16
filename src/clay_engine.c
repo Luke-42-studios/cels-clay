@@ -113,7 +113,7 @@ CEL_Observe(ClayEngineLC, on_destroy) {
 CEL_Module(Clay_Engine, init) {
     /* Register state, lifecycle, components, and systems */
     cels_register(ClayEngineState, ClayEngineLC);
-    cels_register(ClaySurfaceConfig, ClayUI);
+    cels_register(ClaySurfaceConfig);
     cels_register(ClayRenderableData);
     cels_register(ClayContainerConfig, ClayTextConfig, ClaySpacerConfig,
                   ClayImageConfig, ClayBorderStyle);

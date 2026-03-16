@@ -31,7 +31,7 @@
  * Component ID Variables and Registration Functions
  * ============================================================================
  *
- * Same pattern as ClayUI_id/ClayUI_register in clay_layout.c.
+ * Same pattern as ClaySurfaceConfig_id/ClaySurfaceConfig_register in clay_layout.c.
  * Each component gets:
  *   - An extern entity ID (initially 0)
  *   - A register function with idempotent guard
