@@ -105,3 +105,36 @@ if(TARGET cels-sdl3)
         cels-sdl3
     )
 endif()
+
+# ============================================================================
+# Example applications (optional)
+# ============================================================================
+option(CELS_CLAY_BUILD_EXAMPLES "Build cels-clay example applications" OFF)
+
+if(CELS_CLAY_BUILD_EXAMPLES)
+    # NCurses example (requires cels-ncurses)
+    if(TARGET cels-ncurses)
+        add_executable(cels-clay-example-ncurses
+            ${CMAKE_CURRENT_SOURCE_DIR}/examples/minimal/main_ncurses.c
+        )
+        target_link_libraries(cels-clay-example-ncurses PRIVATE
+            cels-clay
+        )
+        target_include_directories(cels-clay-example-ncurses PRIVATE
+            ${CMAKE_CURRENT_SOURCE_DIR}/examples/minimal
+        )
+    endif()
+
+    # SDL3 example (requires cels-sdl3)
+    if(TARGET cels-sdl3)
+        add_executable(cels-clay-example-sdl3
+            ${CMAKE_CURRENT_SOURCE_DIR}/examples/minimal/main_sdl3.c
+        )
+        target_link_libraries(cels-clay-example-sdl3 PRIVATE
+            cels-clay
+        )
+        target_include_directories(cels-clay-example-sdl3 PRIVATE
+            ${CMAKE_CURRENT_SOURCE_DIR}/examples/minimal
+        )
+    endif()
+endif()
