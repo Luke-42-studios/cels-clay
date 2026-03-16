@@ -51,9 +51,14 @@ CEL_System(QuitInput, .phase = OnUpdate) {
 CEL_Compose(NCursesApp) {
     NCursesWindow(.title = "cels-clay example", .fps = 30) {
         /* Terminal dimensions: width / 2.0 for aspect ratio compensation.
-         * Standard 80-col terminal: 80 / 2.0 = 40 Clay units wide.
-         * Height maps 1:1 to terminal rows. */
-        ClaySurface(.width = 40.0f, .height = 24.0f) {
+         * The NCurses renderer scales horizontal values by cell_aspect_ratio
+         * (default 2.0), so Clay width = terminal cols / 2.0.
+         * Height maps 1:1 to terminal rows.
+         * cel_watch makes this reactive — recomposes on terminal resize. */
+        const struct NCurses_WindowState* ws = cel_read(NCurses_WindowState);
+        float w = ws && ws->width > 0 ? (float)ws->width / 2.0f : 40.0f;
+        float h = ws && ws->height > 0 ? (float)ws->height : 24.0f;
+        ClaySurface(.width = w, .height = h) {
             build_ui();
         }
     }

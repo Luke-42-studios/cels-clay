@@ -390,8 +390,6 @@ static void clay_walk_entity(ecs_world_t* world, ecs_entity_t entity) {
     } else if (image) {
         emit_image(world, entity, image);
     } else {
-        /* No layout component -- transparent passthrough.
-         * Walk children directly so they still participate in the Clay tree. */
         clay_walk_children(world, entity);
     }
 
