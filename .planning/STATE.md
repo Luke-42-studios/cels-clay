@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-03-15)
 
 **Core value:** Declarative UI development where developers build interfaces by composing entities with layout properties -- CELS handles state and reactivity, Clay handles layout math, and the renderer is a pluggable detail.
-**Current focus:** v0.6 milestone -- Phase 10 (SDL3 Renderer)
+**Current focus:** v0.6 milestone complete -- all phases (6-11) delivered
 
 ## Current Position
 
-Phase: 10 of 11 (SDL3 Renderer)
+Phase: 11 of 11 (Dual-Renderer Example)
 Plan: 1 of 1 in current phase
-Status: Phase complete
-Last activity: 2026-03-15 -- Completed 10-01-PLAN.md
+Status: v0.6 milestone complete
+Last activity: 2026-03-15 -- Completed 11-01-PLAN.md
 
-Progress: [########..] 83% (v0.6 phases 6-11, 5/6 phases complete)
+Progress: [##########] 100% (v0.6 phases 6-11, 6/6 phases complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 15 (v0.5 phases 1-4 + v0.6 phases 6-10)
-- Average duration: 6.5 min
-- Total execution time: 98 min
+- Total plans completed: 16 (v0.5 phases 1-4 + v0.6 phases 6-11)
+- Average duration: 6.7 min
+- Total execution time: 107 min
 
 **By Phase:**
 
@@ -37,10 +37,11 @@ Progress: [########..] 83% (v0.6 phases 6-11, 5/6 phases complete)
 | 8 | 1 | 13 min | 13 min |
 | 9 | 1 | 8 min | 8 min |
 | 10 | 1 | 4 min | 4 min |
+| 11 | 1 | 9 min | 9 min |
 
 **Recent Trend:**
-- Last 5 plans: 07-01 (27 min), 08-01 (13 min), 09-01 (8 min), 10-01 (4 min)
-- Trend: 10-01 fastest phase yet; well-defined renderer pattern from NCurses + Clay reference renderer
+- Last 5 plans: 08-01 (13 min), 09-01 (8 min), 10-01 (4 min), 11-01 (9 min)
+- Trend: v0.6 phases 9-11 consistently fast (4-9 min); well-established patterns from prior phases
 
 *Updated after each plan completion*
 
@@ -73,6 +74,9 @@ Recent decisions affecting current work:
 - [10-01]: Borders as SDL_RenderFillRect per side -- matches Clay reference renderer, proper thickness
 - [10-01]: Corner radius deferred to v2 -- requires SDL_RenderGeometry tessellation
 - [10-01]: Font size set per text element via TTF_SetFontSize -- supports Clay multi-size text
+- [11-01]: Used primitive compositions directly in ui.h (not CEL_Compose wrappers) -- avoids static linkage issues in INTERFACE library headers
+- [11-01]: ClaySurface dimensions: 40x24 for NCurses (aspect-ratio-compensated), 1280x720 for SDL3 (pixel-accurate)
+- [11-01]: OnUpdate phase shorthand for systems (current v0.4 API convention)
 
 ### Pending Todos
 
@@ -80,11 +84,11 @@ None.
 
 ### Blockers/Concerns
 
-- v0.5 Phase 5 (Demo App) is incomplete (plans 05-01, 05-02 not finished) -- v0.6 work will supersede this
-- Text measurement conflict between NCurses (cells) and SDL3 (pixels) -- active renderer must own the callback (resolved: each renderer's CEL_Module registers its own Clay_SetMeasureTextFunction)
+- v0.5 Phase 5 (Demo App) is incomplete (plans 05-01, 05-02 not finished) -- v0.6 work supersedes this
+- Text measurement conflict between NCurses (cells) and SDL3 (pixels) -- resolved: each renderer's CEL_Module registers its own Clay_SetMeasureTextFunction
 
 ## Session Continuity
 
 Last session: 2026-03-15
-Stopped at: Completed 10-01-PLAN.md (SDL3 Renderer). Phase 10 complete.
+Stopped at: Completed 11-01-PLAN.md (Dual-Renderer Example). v0.6 milestone complete.
 Resume file: None
