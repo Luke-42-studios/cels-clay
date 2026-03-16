@@ -105,7 +105,7 @@ extern void ClaySurfaceConfig_register(void);
  * static linkage, avoiding multiple-definition errors when included by
  * multiple TUs in the INTERFACE library pattern. */
 typedef struct ClaySurfaceProps {
-    LifecycleDef_C* lifecycle;
+    cels_lifecycle_def_t* lifecycle;
     const char* id;
     float width;
     float height;

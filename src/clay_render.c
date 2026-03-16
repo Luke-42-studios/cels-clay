@@ -18,7 +18,6 @@
  * Clay Render Bridge - Implementation
  *
  * Implements the render bridge subsystem:
- * - ClayRenderable Feature definition at OnStore phase
  * - ClayRenderableData component registration
  * - Singleton ClayRenderTarget entity creation
  * - Render dispatch system that updates the singleton each frame
@@ -27,7 +26,7 @@
  * Phase ordering:
  *   PreStore  -> ClayLayoutSystem (BeginLayout -> tree walk -> EndLayout)
  *   OnStore   -> ClayRenderDispatch (copies commands into ClayRenderableData)
- *            -> [Provider system] (backend reads ClayRenderableData, draws)
+ *            -> [Backend renderer system] (reads ClayRenderableData, draws)
  *
  * NOTE: This file compiles in the CONSUMER's context (INTERFACE library).
  */
@@ -39,22 +38,6 @@
 #include <flecs.h>
 #include <stdio.h>
 #include <stdbool.h>
-
-/* ============================================================================
- * Feature Definition (file scope) -- Feature/Provider system retired in v0.4
- * ============================================================================
- *
- * ClayRenderable_register() assigns a stable non-zero ID for backward
- * compatibility. The Feature/Provider system is no longer used; render
- * systems are registered directly via cels_system_declare().
- */
-cels_entity_t ClayRenderable_feature_id = 0;
-static unsigned int _clay_feature_counter = 2000;
-void ClayRenderable_register(void) {
-    if (ClayRenderable_feature_id == 0) {
-        ClayRenderable_feature_id = (cels_entity_t)(++_clay_feature_counter);
-    }
-}
 
 /* ============================================================================
  * Component Registration
@@ -83,9 +66,6 @@ static uint32_t g_frame_number = 0;
  * Runs each frame at OnStore phase. Reads the most recent render commands
  * and layout dimensions from the layout subsystem, packages them into
  * ClayRenderableData, and updates the singleton entity's component.
- *
- * Registered BEFORE providers are finalized (providers are created lazily
- * on first Engine_Progress), so this system runs first within OnStore.
  */
 static void ClayRenderDispatch_callback(ecs_iter_t* it) {
     g_frame_number++;
@@ -111,8 +91,8 @@ static void ClayRenderDispatch_callback(ecs_iter_t* it) {
  * Public Getter API
  * ============================================================================
  *
- * For advanced users who want raw render commands without Feature/Provider.
- * Delegates to the layout subsystem's internal getter.
+ * For advanced users who want raw render commands. Delegates to the layout
+ * subsystem's internal getter.
  */
 Clay_RenderCommandArray cel_clay_get_render_commands(void) {
     return _cel_clay_get_render_commands();
@@ -122,9 +102,8 @@ Clay_RenderCommandArray cel_clay_get_render_commands(void) {
  * Init (called from clay_engine.c during module init)
  * ============================================================================
  *
- * Creates the singleton render target entity and declares the Feature
- * relationship. Must be called AFTER Clay is initialized and components
- * are available.
+ * Creates the singleton render target entity and initializes the component.
+ * Must be called AFTER Clay is initialized and components are available.
  */
 void _cel_clay_render_init(void) {
     ClayRenderableData_register();
@@ -138,13 +117,10 @@ void _cel_clay_render_init(void) {
     ClayRenderableData initial = {0};
     ecs_set_id(world, g_render_target, ClayRenderableData_id,
                sizeof(ClayRenderableData), &initial);
-
-    /* Feature/Provider retired in v0.4 -- _CEL_Feature call removed */
-    ClayRenderable_register();
 }
 
 /* ============================================================================
- * System Registration (called from clay_engine.c BEFORE providers finalize)
+ * System Registration
  * ============================================================================
  *
  * Registers ClayRenderDispatch at OnStore phase using direct ecs_system_init.

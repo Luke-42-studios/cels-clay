@@ -15,15 +15,15 @@
  */
 
 /*
- * Clay Render Bridge - CELS Feature/Provider Interface for Clay Render Commands
+ * Clay Render Bridge - Render Command Dispatch for Clay Layout
  *
  * Bridges the Clay layout system output (Clay_RenderCommandArray) to renderer
- * backends via the CELS Feature/Provider pattern. The render dispatch system
- * runs at OnStore phase (after layout at PreStore), updating a singleton
- * ClayRenderTarget entity with current render commands each frame.
+ * backends. The render dispatch system runs at OnStore phase (after layout at
+ * PreStore), updating a singleton ClayRenderTarget entity with current render
+ * commands each frame.
  *
- * Backend registration:
- *   _CEL_Provides(MyBackend, ClayRenderable, ClayRenderableData, my_renderer);
+ * Backend renderers register their systems via cels_system_declare() and
+ * read ClayRenderableData from the singleton entity.
  *
  * Advanced users (custom systems):
  *   Clay_RenderCommandArray cmds = cel_clay_get_render_commands();
@@ -43,7 +43,8 @@
  *
  * Attached to the singleton ClayRenderTarget entity. Updated each frame by
  * the render dispatch system with current render commands, layout dimensions,
- * frame metadata, and dirty flag. Backends query this via _CEL_Provides.
+ * frame metadata, and dirty flag. Backend renderers read this component
+ * from the singleton entity.
  */
 typedef struct ClayRenderableData {
     Clay_RenderCommandArray render_commands;
@@ -61,8 +62,8 @@ extern void ClayRenderableData_register(void);
  * Public Getter API
  * ============================================================================
  *
- * For advanced users who want raw render commands without the Feature/Provider
- * pattern. Returns the most recent Clay_RenderCommandArray from the layout pass.
+ * For advanced users who want raw render commands. Returns the most recent
+ * Clay_RenderCommandArray from the layout pass.
  */
 extern Clay_RenderCommandArray cel_clay_get_render_commands(void);
 
@@ -73,15 +74,11 @@ extern Clay_RenderCommandArray cel_clay_get_render_commands(void);
  * Called from clay_engine.c during module initialization. Not for direct
  * consumer use.
  *
- * _cel_clay_render_init: Creates singleton entity, registers component, declares feature.
+ * _cel_clay_render_init: Creates singleton entity, registers component.
  * _cel_clay_render_system_register: Registers dispatch system at OnStore phase.
  */
 extern void _cel_clay_render_init(void);
 extern void _cel_clay_render_system_register(void);
-
-/* ClayRenderable feature register function (non-static for cross-TU visibility
- * in INTERFACE library). Used by clay_ncurses_renderer.c via _CEL_Provides. */
-extern void ClayRenderable_register(void);
 
 /* ============================================================================
  * CelClayBorderDecor - Renderer-drawn border decoration
