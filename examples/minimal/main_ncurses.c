@@ -12,6 +12,7 @@
 
 #include <cels/cels.h>
 #include <cels_ncurses.h>
+#include <flecs.h>
 #include <cels-clay/clay_engine.h>
 #include <cels-clay/clay_ncurses_renderer.h>
 #include <cels-clay/clay_primitives.h>
@@ -36,29 +37,47 @@ CEL_System(QuitInput, .phase = OnUpdate) {
 }
 
 /* ============================================================================
- * Root Composition -- NCurses window + ClaySurface + shared UI
+ * Resize System -- sync ClaySurface to terminal size each frame
  * ============================================================================
  *
- * NCursesWindow creates the terminal session. ClaySurface dimensions use
- * aspect-ratio-compensated width (cols / 2.0) because Clay's coordinate
- * system maps to terminal cells via the NCurses renderer's 2:1 aspect
- * ratio compensation.
+ * Reads current terminal dimensions from NCurses_WindowState and updates
+ * ClaySurfaceConfig on all surface entities. This handles initial sizing
+ * (first frame after ncurses init) and terminal resize events.
  *
- * For this minimal example, fixed dimensions (80x24) target a standard
- * terminal. A production app would watch NCurses_WindowState for resize.
+ * Width is divided by 2.0 (cell_aspect_ratio) because the renderer
+ * multiplies horizontal coordinates by 2.0 to compensate for terminal
+ * cells being ~2x taller than wide.
  */
+
+CEL_System(SyncSurfaceSize, .phase = OnUpdate) {
+    cel_run {
+        const struct NCurses_WindowState* ws = cel_read(NCurses_WindowState);
+        if (!ws || ws->width <= 0 || ws->height <= 0) return;
+
+        float w = (float)ws->width / 2.0f;
+        float h = (float)ws->height;
+
+        /* Update all ClaySurfaceConfig entities */
+        ecs_world_t* world = cels_get_world(cels_get_context());
+        ecs_iter_t it = ecs_each_id(world, ClaySurfaceConfig_id);
+        while (ecs_each_next(&it)) {
+            for (int i = 0; i < it.count; i++) {
+                ClaySurfaceConfig new_config = { .width = w, .height = h };
+                ecs_set_id(world, it.entities[i], ClaySurfaceConfig_id,
+                           sizeof(ClaySurfaceConfig), &new_config);
+            }
+        }
+    }
+}
+
+/* ============================================================================
+ * Root Composition -- NCurses window + ClaySurface + shared UI
+ * ============================================================================ */
 
 CEL_Compose(NCursesApp) {
     NCursesWindow(.title = "cels-clay example", .fps = 30) {
-        /* Terminal dimensions: width / 2.0 for aspect ratio compensation.
-         * The NCurses renderer scales horizontal values by cell_aspect_ratio
-         * (default 2.0), so Clay width = terminal cols / 2.0.
-         * Height maps 1:1 to terminal rows.
-         * cel_watch makes this reactive — recomposes on terminal resize. */
-        const struct NCurses_WindowState* ws = cel_read(NCurses_WindowState);
-        float w = ws && ws->width > 0 ? (float)ws->width / 2.0f : 40.0f;
-        float h = ws && ws->height > 0 ? (float)ws->height : 30.0f;
-        ClaySurface(.width = w, .height = h) {
+        /* Initial size — SyncSurfaceSize system updates this each frame */
+        ClaySurface(.width = 40.0f, .height = 24.0f) {
             build_ui();
         }
     }
@@ -78,7 +97,7 @@ CEL_Compose(NCursesApp) {
 
 cels_main() {
     cels_register(NCurses, Clay_Engine, Clay_NCurses);
-    cels_register(QuitInput);
+    cels_register(QuitInput, SyncSurfaceSize);
 
     cels_session(NCursesApp) {
         while (cels_running()) {
