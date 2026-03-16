@@ -17,27 +17,27 @@
 /*
  * Clay Layout System - Public API for CELS-Clay Layout Integration
  *
- * Provides the developer-facing API for building Clay layout trees from
- * CELS entity hierarchies. Layout functions are defined at file scope
- * with CEL_Clay_Layout(name), attached to entities via ClayUI component,
- * and called per-frame by the layout system between BeginLayout/EndLayout.
+ * Provides the layout infrastructure for building Clay layout trees from
+ * CELS entity hierarchies. The layout system reads property components
+ * (ClayContainerConfig, ClayTextConfig, etc. from clay_primitives.h) from
+ * entities and generates corresponding CLAY() calls per-frame.
+ *
+ * Developers compose UI by attaching property components to entities via
+ * primitive compositions (ClayRow, ClayColumn, ClayText, etc.), and the
+ * layout walker handles all Clay API interaction internally.
  *
  * Usage:
  *   #include <cels-clay/clay_layout.h>
+ *   #include <cels-clay/clay_primitives.h>
  *
- *   // 1. Define layout function at file scope
- *   CEL_Clay_Layout(my_layout) {
- *       CEL_Clay(.layout = { .layoutDirection = CLAY_TOP_TO_BOTTOM }) {
- *           CEL_Clay_Children();
- *       }
- *   }
- *
- *   // 2. Attach to entity inside a composition
- *   CEL_Has(ClayUI, .layout_fn = my_layout);
- *
- *   // 3. Wrap tree in ClaySurface
+ *   // Wrap tree in ClaySurface
  *   ClaySurface(.width = 80, .height = 24) {
- *       MyApp() {}
+ *       ClayColumn(.gap = 1) {
+ *           ClayText(.text = "Hello") {}
+ *           ClayRow(.gap = 2) {
+ *               ClayText(.text = "World") {}
+ *           }
+ *       }
  *   }
  */
 
@@ -47,22 +47,6 @@
 #include <cels/cels.h>
 #include "clay.h"
 #include <stdbool.h>
-
-/* ============================================================================
- * ClayUI Component
- * ============================================================================
- *
- * Entities with ClayUI participate in the Clay layout tree. The layout
- * system queries these and calls .layout_fn during the per-frame tree walk.
- */
-typedef void (*CelClayLayoutFn)(struct ecs_world_t* world, cels_entity_t self);
-
-typedef struct ClayUI {
-    CelClayLayoutFn layout_fn;
-} ClayUI;
-
-extern cels_entity_t ClayUI_id;
-extern void ClayUI_register(void);
 
 /* ============================================================================
  * ClaySurfaceConfig Component
@@ -127,33 +111,12 @@ static void ClaySurface_impl(ClaySurface_props props) {
 #define ClaySurface(...) cel_init(ClaySurface, __VA_ARGS__)
 
 /* ============================================================================
- * CEL_Clay_Layout(name)
- * ============================================================================
- *
- * Defines a layout function signature at file scope. Use inside layouts
- * to emit CLAY() elements. Reference the function name in CEL_Has(ClayUI).
- *
- * Example:
- *   CEL_Clay_Layout(sidebar_layout) {
- *       CEL_Clay(.layout = { .layoutDirection = CLAY_TOP_TO_BOTTOM }) {
- *           CLAY_TEXT(CLAY_STRING("Header"), text_config);
- *           CEL_Clay_Children();
- *       }
- *   }
- *
- *   // In composition:
- *   CEL_Has(ClayUI, .layout_fn = sidebar_layout);
- */
-#define CEL_Clay_Layout(name) \
-    static void name(struct ecs_world_t* world, cels_entity_t self)
-
-/* ============================================================================
  * CEL_Clay(...)
  * ============================================================================
  *
  * Wraps CLAY() with an auto-generated unique Clay_ElementId derived from
- * the current entity ID and the call site counter (__COUNTER__). Use
- * inside layout functions to emit Clay elements.
+ * the current entity ID and the call site counter (__COUNTER__). Used
+ * internally by emit functions and available for advanced custom layouts.
  *
  * The trailing block contains CLAY_TEXT, nested CEL_Clay, CEL_Clay_Children,
  * or other Clay element calls.
@@ -170,17 +133,9 @@ static void ClaySurface_impl(ClaySurface_props props) {
  * CEL_Clay_Children()
  * ============================================================================
  *
- * Emits child entities at this point in the CLAY tree. Controls WHERE
- * in the layout tree children appear -- not always at end of scope.
- *
- * Example:
- *   CEL_Clay_Layout(panel_layout) {
- *       CEL_Clay(.layout = { .layoutDirection = CLAY_TOP_TO_BOTTOM }) {
- *           CLAY_TEXT(CLAY_STRING("Title"), title_config);
- *           CEL_Clay_Children();   // children render HERE, between title and footer
- *           CLAY_TEXT(CLAY_STRING("Footer"), footer_config);
- *       }
- *   }
+ * Emits child entities at this point in the CLAY tree. Used internally
+ * by the layout walker's emit functions. Also available for advanced
+ * custom layout patterns that need explicit child placement control.
  */
 #define CEL_Clay_Children() \
     _cel_clay_emit_children()
@@ -201,7 +156,7 @@ static void ClaySurface_impl(ClaySurface_props props) {
  * ============================================================================
  *
  * Emits only a range of child entities (0-based, in sibling order).
- * Used by scrollable containers for virtual rendering — only visible
+ * Used by scrollable containers for virtual rendering -- only visible
  * children get Clay elements, avoiding element overflow for large lists.
  *
  * Example:

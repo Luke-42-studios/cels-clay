@@ -118,7 +118,7 @@ typedef struct ClayBorderStyle {
  * Component ID Extern Declarations
  * ============================================================================
  *
- * Defined in clay_primitives.c. Same pattern as ClayUI_id in clay_layout.h.
+ * Defined in clay_primitives.c. Same pattern as ClaySurfaceConfig_id in clay_layout.h.
  */
 
 extern cels_entity_t ClayContainerConfig_id;
