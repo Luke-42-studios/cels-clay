@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-03-15)
 
 **Core value:** Declarative UI development where developers build interfaces by composing entities with layout properties -- CELS handles state and reactivity, Clay handles layout math, and the renderer is a pluggable detail.
-**Current focus:** v0.6 milestone -- Phase 9 (NCurses Migration)
+**Current focus:** v0.6 milestone -- Phase 10 (SDL3 Renderer)
 
 ## Current Position
 
-Phase: 9 of 11 (NCurses Migration)
+Phase: 10 of 11 (SDL3 Renderer)
 Plan: 1 of 1 in current phase
 Status: Phase complete
-Last activity: 2026-03-15 -- Completed 09-01-PLAN.md
+Last activity: 2026-03-15 -- Completed 10-01-PLAN.md
 
-Progress: [######....] 67% (v0.6 phases 6-11, 4/6 phases complete)
+Progress: [########..] 83% (v0.6 phases 6-11, 5/6 phases complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 14 (v0.5 phases 1-4 + v0.6 phases 6-9)
-- Average duration: 6.7 min
-- Total execution time: 94 min
+- Total plans completed: 15 (v0.5 phases 1-4 + v0.6 phases 6-10)
+- Average duration: 6.5 min
+- Total execution time: 98 min
 
 **By Phase:**
 
@@ -36,10 +36,11 @@ Progress: [######....] 67% (v0.6 phases 6-11, 4/6 phases complete)
 | 7 | 1 | 27 min | 27 min |
 | 8 | 1 | 13 min | 13 min |
 | 9 | 1 | 8 min | 8 min |
+| 10 | 1 | 4 min | 4 min |
 
 **Recent Trend:**
-- Last 5 plans: 06-01 (11 min), 07-01 (27 min), 08-01 (13 min), 09-01 (8 min)
-- Trend: 09-01 fastest of v0.6 phases; straightforward module wrap with no behavioral changes
+- Last 5 plans: 07-01 (27 min), 08-01 (13 min), 09-01 (8 min), 10-01 (4 min)
+- Trend: 10-01 fastest phase yet; well-defined renderer pattern from NCurses + Clay reference renderer
 
 *Updated after each plan completion*
 
@@ -67,6 +68,11 @@ Recent decisions affecting current work:
 - [08-01]: Zero-initialized Clay_SizingAxis treated as GROW(0) via _sizing_or_grow() helper
 - [09-01]: g_theme initialized to NULL so module body detects if Clay_NCurses_configure was called
 - [09-01]: Renderer module pattern: CEL_Module body registers text measurement + render system
+- [10-01]: TTF text engine API (TTF_CreateText + TTF_DrawRendererText) instead of surface->texture pipeline -- follows Clay reference renderer
+- [10-01]: Lazy SDL_Renderer creation from SDL3_WindowComponent -- window may not exist at module init time
+- [10-01]: Borders as SDL_RenderFillRect per side -- matches Clay reference renderer, proper thickness
+- [10-01]: Corner radius deferred to v2 -- requires SDL_RenderGeometry tessellation
+- [10-01]: Font size set per text element via TTF_SetFontSize -- supports Clay multi-size text
 
 ### Pending Todos
 
@@ -75,11 +81,10 @@ None.
 ### Blockers/Concerns
 
 - v0.5 Phase 5 (Demo App) is incomplete (plans 05-01, 05-02 not finished) -- v0.6 work will supersede this
-- SDL3 renderer handle access from cels-sdl3 needs verification (MEDIUM confidence from research)
-- Text measurement conflict between NCurses (cells) and SDL3 (pixels) -- active renderer must own the callback
+- Text measurement conflict between NCurses (cells) and SDL3 (pixels) -- active renderer must own the callback (resolved: each renderer's CEL_Module registers its own Clay_SetMeasureTextFunction)
 
 ## Session Continuity
 
 Last session: 2026-03-15
-Stopped at: Completed 09-01-PLAN.md (NCurses Migration). Phase 9 complete.
+Stopped at: Completed 10-01-PLAN.md (SDL3 Renderer). Phase 10 complete.
 Resume file: None
