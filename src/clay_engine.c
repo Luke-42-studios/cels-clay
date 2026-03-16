@@ -34,6 +34,7 @@
 #include "cels-clay/clay_engine.h"
 #include "cels-clay/clay_layout.h"
 #include "cels-clay/clay_render.h"
+#include "cels-clay/clay_primitives.h"
 #include "clay.h"
 
 #include <stdlib.h>
@@ -114,6 +115,8 @@ CEL_Module(Clay_Engine, init) {
     cels_register(ClayEngineState, ClayEngineLC);
     cels_register(ClaySurfaceConfig, ClayUI);
     cels_register(ClayRenderableData);
+    cels_register(ClayContainerConfig, ClayTextConfig, ClaySpacerConfig,
+                  ClayImageConfig, ClayBorderStyle);
 
     /* 1. Set generous element/text cache limits BEFORE Clay_MinMemorySize().
      * Default is too small for terminal apps with long text at wide widths. */
