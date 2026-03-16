@@ -92,11 +92,16 @@ endif()
 # Optional SDL3 renderer (when cels-sdl3 is available)
 # ============================================================================
 # The SDL3 renderer translates Clay render commands into graphical output
-# using SDL3 rendering API. Conditionally compiled only when cels-sdl3
-# exists as a CMake target. Phase 10 will add source and link here.
+# using SDL3 rendering API and SDL3_ttf for text. Conditionally compiled
+# only when cels-sdl3 exists as a CMake target (i.e., the consumer links
+# both modules). The INTERFACE link propagates SDL3 include paths and link
+# flags to consumers.
 
 if(TARGET cels-sdl3)
-    # Phase 10: SDL3 renderer sources and link will be added here
-    # target_sources(cels-clay INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/src/clay_sdl3_renderer.c)
-    # target_link_libraries(cels-clay INTERFACE cels-sdl3)
+    target_sources(cels-clay INTERFACE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/clay_sdl3_renderer.c
+    )
+    target_link_libraries(cels-clay INTERFACE
+        cels-sdl3
+    )
 endif()
