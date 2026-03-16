@@ -103,20 +103,24 @@ extern void ClaySurfaceConfig_register(void);
  */
 /* ClaySurface composition -- manually expanded from CEL_Composition to use
  * static linkage, avoiding multiple-definition errors when included by
- * multiple TUs in the INTERFACE library pattern. */
-typedef struct ClaySurfaceProps {
+ * multiple TUs in the INTERFACE library pattern.
+ *
+ * Naming convention: Name_props, Name_impl, Name_factory -- matches the
+ * _cel_compose_impl macro expectations (cel_init -> _cel_compose -> Name_props,
+ * Name_factory, Name_impl). */
+typedef struct ClaySurface_props {
     cels_lifecycle_def_t* lifecycle;
     const char* id;
     float width;
     float height;
-} ClaySurfaceProps;
-static void ClaySurface_Impl(ClaySurfaceProps props);
+} ClaySurface_props;
+static void ClaySurface_impl(ClaySurface_props props);
 static void ClaySurface_factory(void* _raw_props) {
-    ClaySurfaceProps _p = {0};
-    if (_raw_props) _p = *(ClaySurfaceProps*)_raw_props;
-    ClaySurface_Impl(_p);
+    ClaySurface_props _p = {0};
+    if (_raw_props) _p = *(ClaySurface_props*)_raw_props;
+    ClaySurface_impl(_p);
 }
-static void ClaySurface_Impl(ClaySurfaceProps props) {
+static void ClaySurface_impl(ClaySurface_props props) {
     cel_has(ClaySurfaceConfig, .width = props.width, .height = props.height);
 }
 
