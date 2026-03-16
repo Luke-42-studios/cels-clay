@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-03-15)
 
 **Core value:** Declarative UI development where developers build interfaces by composing entities with layout properties -- CELS handles state and reactivity, Clay handles layout math, and the renderer is a pluggable detail.
-**Current focus:** v0.6 milestone -- Phase 8 (Layout System Rewrite)
+**Current focus:** v0.6 milestone -- Phase 9 (NCurses Migration)
 
 ## Current Position
 
-Phase: 8 of 11 (Layout System Rewrite)
+Phase: 9 of 11 (NCurses Migration)
 Plan: 1 of 1 in current phase
 Status: Phase complete
-Last activity: 2026-03-16 -- Completed 08-01-PLAN.md
+Last activity: 2026-03-15 -- Completed 09-01-PLAN.md
 
-Progress: [#####.....] 50% (v0.6 phases 6-11, 3/6 phases complete)
+Progress: [######....] 67% (v0.6 phases 6-11, 4/6 phases complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 13 (v0.5 phases 1-4 + v0.6 phases 6-8)
-- Average duration: 6.6 min
-- Total execution time: 86 min
+- Total plans completed: 14 (v0.5 phases 1-4 + v0.6 phases 6-9)
+- Average duration: 6.7 min
+- Total execution time: 94 min
 
 **By Phase:**
 
@@ -35,10 +35,11 @@ Progress: [#####.....] 50% (v0.6 phases 6-11, 3/6 phases complete)
 | 6 | 1 | 11 min | 11 min |
 | 7 | 1 | 27 min | 27 min |
 | 8 | 1 | 13 min | 13 min |
+| 9 | 1 | 8 min | 8 min |
 
 **Recent Trend:**
-- Last 5 plans: 05-01 (12 min), 06-01 (11 min), 07-01 (27 min), 08-01 (13 min)
-- Trend: 08-01 faster than 07-01; straightforward rewrite with Clay API already understood from Phase 7
+- Last 5 plans: 06-01 (11 min), 07-01 (27 min), 08-01 (13 min), 09-01 (8 min)
+- Trend: 09-01 fastest of v0.6 phases; straightforward module wrap with no behavioral changes
 
 *Updated after each plan completion*
 
@@ -64,6 +65,8 @@ Recent decisions affecting current work:
 - [08-01]: Clay_ClipElementConfig uses .horizontal/.vertical bools (not enum) -- Clay v0.14 API
 - [08-01]: Clay_ImageElementConfig has only .imageData -- no sourceDimensions in Clay v0.14
 - [08-01]: Zero-initialized Clay_SizingAxis treated as GROW(0) via _sizing_or_grow() helper
+- [09-01]: g_theme initialized to NULL so module body detects if Clay_NCurses_configure was called
+- [09-01]: Renderer module pattern: CEL_Module body registers text measurement + render system
 
 ### Pending Todos
 
@@ -77,6 +80,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-16
-Stopped at: Completed 08-01-PLAN.md (Layout System Rewrite). Phase 8 complete.
+Last session: 2026-03-15
+Stopped at: Completed 09-01-PLAN.md (NCurses Migration). Phase 9 complete.
 Resume file: None
