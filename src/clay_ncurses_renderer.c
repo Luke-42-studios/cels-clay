@@ -439,6 +439,7 @@ static void clay_ncurses_render(cels_iter_t* it) {
     int count = cels_iter_count(it);
     ClayRenderableData* data = (ClayRenderableData*)cels_iter_column(
         it, ClayRenderableData_id, sizeof(ClayRenderableData));
+    if (!data) return;
     for (int i = 0; i < count; i++) {
         if (!data->dirty) continue;
 

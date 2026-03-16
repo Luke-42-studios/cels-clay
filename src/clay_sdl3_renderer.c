@@ -289,6 +289,7 @@ static void clay_sdl3_render(cels_iter_t* it) {
     int count = cels_iter_count(it);
     ClayRenderableData* data = (ClayRenderableData*)cels_iter_column(
         it, ClayRenderableData_id, sizeof(ClayRenderableData));
+    if (!data) return;
 
     for (int i = 0; i < count; i++) {
         if (!data[i].dirty) continue;
