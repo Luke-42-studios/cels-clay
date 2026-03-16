@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-03-15)
 
 **Core value:** Declarative UI development where developers build interfaces by composing entities with layout properties -- CELS handles state and reactivity, Clay handles layout math, and the renderer is a pluggable detail.
-**Current focus:** v0.6 milestone -- Phase 6 (Module Modernization)
+**Current focus:** v0.6 milestone -- Phase 7 (Entity Primitives)
 
 ## Current Position
 
-Phase: 6 of 11 (Module Modernization)
+Phase: 7 of 11 (Entity Primitives)
 Plan: 1 of 1 in current phase
 Status: Phase complete
-Last activity: 2026-03-16 -- Completed 06-01-PLAN.md
+Last activity: 2026-03-16 -- Completed 07-01-PLAN.md
 
-Progress: [##........] 17% (v0.6 phases 6-11, 1/6 phases complete)
+Progress: [###.......] 33% (v0.6 phases 6-11, 2/6 phases complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 11 (v0.5 phases 1-4 + v0.6 phase 6)
-- Average duration: 4.2 min
-- Total execution time: 46 min
+- Total plans completed: 12 (v0.5 phases 1-4 + v0.6 phases 6-7)
+- Average duration: 6.1 min
+- Total execution time: 73 min
 
 **By Phase:**
 
@@ -33,10 +33,11 @@ Progress: [##........] 17% (v0.6 phases 6-11, 1/6 phases complete)
 | 4 | 2 | 5 min | 2.5 min |
 | 5 | 1 | 12 min | 12 min |
 | 6 | 1 | 11 min | 11 min |
+| 7 | 1 | 27 min | 27 min |
 
 **Recent Trend:**
-- Last 5 plans: 04-01 (4 min), 04-02 (1 min), 05-01 (12 min), 06-01 (11 min)
-- Trend: Stable (06-01 comparable to 05-01 due to multi-file modernization)
+- Last 5 plans: 04-02 (1 min), 05-01 (12 min), 06-01 (11 min), 07-01 (27 min)
+- Trend: 07-01 took longer due to Clay API type investigation and composition naming bug discovery/fix
 
 *Updated after each plan completion*
 
@@ -55,6 +56,9 @@ Recent decisions affecting current work:
 - [06-01]: Clay_Engine_configure() replaces Clay_Engine_use() -- config before cels_register(Clay_Engine)
 - [06-01]: CEL_Lifecycle on_destroy for cleanup replaces atexit()
 - [06-01]: Retired clay_layout_use() and clay_render_use() sub-module API
+- [07-01]: Used Clay_BorderElementConfig (not Clay_Border) -- Clay v0.14 actual type
+- [07-01]: Static-linkage composition naming: Name_props, Name_impl, Name_factory (matches _cel_compose_impl macro)
+- [07-01]: Fixed ClaySurface naming from ClaySurfaceProps/ClaySurface_Impl to ClaySurface_props/ClaySurface_impl
 
 ### Pending Todos
 
@@ -69,5 +73,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-16
-Stopped at: Completed 06-01-PLAN.md (Module Modernization). Phase 6 complete.
+Stopped at: Completed 07-01-PLAN.md (Entity Primitives). Phase 7 complete.
 Resume file: None
