@@ -18,8 +18,8 @@
  * Clay ncurses Renderer - Terminal renderer for Clay render commands
  *
  * Translates Clay_RenderCommandArray into visible terminal output using
- * cels-ncurses drawing primitives. Registers as a _CEL_Provides backend
- * for the ClayRenderable feature.
+ * cels-ncurses drawing primitives. Registers as a render backend via
+ * cels_system_declare().
  *
  * The renderer handles 5 Clay command types:
  *   RECTANGLE    -> tui_draw_fill_rect (filled background)
@@ -36,7 +36,7 @@
  * Usage:
  *   #include <cels-clay/clay_ncurses_renderer.h>
  *
- *   // In module init, after Clay_Engine_use():
+ *   // In module init, after cels_register(Clay_Engine):
  *   clay_ncurses_renderer_init(NULL);  // NULL = default theme
  *
  *   // Or with custom theme:
@@ -133,9 +133,9 @@ static const ClayNcursesTheme CLAY_NCURSES_THEME_DEFAULT = {
  *   1. Stores the theme pointer
  *   2. Converts theme UTF-8 border strings to cchar_t for ncurses
  *   3. Registers text measurement callback via Clay_SetMeasureTextFunction
- *   4. Registers as provider via _CEL_Provides(NCurses, ClayRenderable, ...)
+ *   4. Registers render system via cels_system_declare()
  *
- * Call after Clay_Engine_use() and cels-ncurses initialization. */
+ * Call after cels_register(Clay_Engine) and cels-ncurses initialization. */
 extern void clay_ncurses_renderer_init(const ClayNcursesTheme* theme);
 
 /* Change the renderer theme at runtime. Pass NULL for default theme.

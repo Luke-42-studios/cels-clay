@@ -18,8 +18,8 @@
  * Clay ncurses Renderer - Implementation
  *
  * Translates Clay_RenderCommandArray into terminal output using the
- * cels-ncurses drawing API. Registers as a _CEL_Provides backend for
- * the ClayRenderable feature defined in clay_render.c.
+ * cels-ncurses drawing API. Registers as a render backend via
+ * cels_system_declare().
  *
  * Coordinate mapping:
  *   Clay computes layout in float units. The text measurement callback

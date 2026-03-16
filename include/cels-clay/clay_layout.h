@@ -95,7 +95,6 @@ extern void ClaySurfaceConfig_register(void);
  *
  * Usage:
  *   CEL_Root(App) {
- *       Clay_Engine_use((Clay_EngineConfig){0});
  *       ClaySurface(.width = 80, .height = 24) {
  *           Sidebar() {}
  *           Content() {}

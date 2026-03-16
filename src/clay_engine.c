@@ -18,10 +18,11 @@
  * Clay Engine Module - Implementation
  *
  * Initializes the Clay layout engine: arena allocation, error handler,
- * and cleanup. Uses _CEL_DefineModule for idempotent initialization.
+ * and cleanup. Uses CEL_Module for idempotent initialization.
  *
  * Usage:
- *   Clay_Engine_use(config) -- configure and initialize Clay
+ *   Clay_Engine_configure(config) -- store config before module init
+ *   cels_register(Clay_Engine)    -- initialize Clay via module system
  *
  * The arena is allocated with at least Clay_MinMemorySize() bytes.
  * Consumer can override via ClayEngineConfig.arena_size.
@@ -43,7 +44,7 @@
  * Static State
  * ============================================================================ */
 
-/* Module-level config (stored by Clay_Engine_use, read by init body) */
+/* Module-level config (stored by Clay_Engine_configure, read by module init) */
 static ClayEngineConfig g_clay_config = {0};
 
 /* Original malloc pointer -- needed for free() because Clay aligns
@@ -52,6 +53,12 @@ static void* g_clay_arena_memory = NULL;
 
 /* Clay context pointer -- stored for future multi-context support */
 static Clay_Context* g_clay_context = NULL;
+
+/* ============================================================================
+ * State Singleton
+ * ============================================================================ */
+
+CEL_State(ClayEngineState);
 
 /* ============================================================================
  * Error Handler
@@ -83,22 +90,31 @@ static void clay_error_handler(Clay_ErrorData error) {
 }
 
 /* ============================================================================
- * Cleanup
+ * Lifecycle -- Arena cleanup on entity destruction
  * ============================================================================ */
 
-static void clay_cleanup(void) {
+CEL_Lifecycle(ClayEngineLC);
+
+CEL_Observe(ClayEngineLC, on_destroy) {
+    (void)entity;
     _cel_clay_layout_cleanup();  /* Free frame arena (before Clay arena) */
     if (g_clay_arena_memory != NULL) {
         free(g_clay_arena_memory);
         g_clay_arena_memory = NULL;
     }
+    ClayEngineState.initialized = false;
 }
 
 /* ============================================================================
  * Module Definition
  * ============================================================================ */
 
-cel_module(Clay_Engine) {
+CEL_Module(Clay_Engine, init) {
+    /* Register state, lifecycle, components, and systems */
+    cels_register(ClayEngineState, ClayEngineLC);
+    cels_register(ClaySurfaceConfig, ClayUI);
+    cels_register(ClayRenderableData);
+
     /* 1. Set generous element/text cache limits BEFORE Clay_MinMemorySize().
      * Default is too small for terminal apps with long text at wide widths. */
     Clay_SetMaxElementCount(8192);
@@ -134,48 +150,30 @@ cel_module(Clay_Engine) {
         (Clay_ErrorHandler){ .errorHandlerFunction = clay_error_handler }
     );
 
-    /* 4. Initialize layout subsystem (frame arena, text measurement, components) */
+    /* 5. Register state singleton with cross-TU pointer registry */
+    ClayEngineState_register();
+    cels_state_bind(ClayEngineState);
+    ClayEngineState.initialized = true;
+
+    /* 6. Initialize layout subsystem (frame arena, text measurement, components) */
     _cel_clay_layout_init();
 
-    /* 5. Initialize render bridge (singleton entity, feature declaration) */
+    /* 7. Initialize render bridge (singleton entity, component registration) */
     _cel_clay_render_init();
 
-    /* 6. Register systems in correct order:
+    /* 8. Register systems in correct order:
      *    a) Layout at PreStore (runs first each frame)
-     *    b) Render dispatch at OnStore (runs after layout, before providers) */
+     *    b) Render dispatch at OnStore (runs after layout) */
     _cel_clay_layout_system_register();
     _cel_clay_render_system_register();
-
-    /* 7. Register cleanup for process exit */
-    atexit(clay_cleanup);
 }
 
 /* ============================================================================
  * Public API
  * ============================================================================ */
 
-void Clay_Engine_use(const ClayEngineConfig* config) {
+void Clay_Engine_configure(const ClayEngineConfig* config) {
     if (config) {
         g_clay_config = *config;
     }
-    Clay_Engine_init();  /* idempotent via _CEL_DefineModule guard */
-}
-
-/* ============================================================================
- * Composable Sub-Modules
- * ============================================================================
- *
- * For advanced users who want individual subsystems without the full
- * Clay_Engine_use(). NOTE: These do NOT allocate the Clay arena or call
- * Clay_Initialize -- the caller is responsible for Clay setup.
- */
-
-void clay_layout_use(void) {
-    _cel_clay_layout_init();
-    _cel_clay_layout_system_register();
-}
-
-void clay_render_use(void) {
-    _cel_clay_render_init();
-    _cel_clay_render_system_register();
 }

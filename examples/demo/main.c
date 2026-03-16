@@ -27,7 +27,7 @@
  * Architecture:
  *   CEL_Build(DemoApp) initializes three modules:
  *     1. TUI_Engine_use  - ncurses window + input + frame pipeline
- *     2. Clay_Engine_use - Clay arena + layout system + render bridge
+ *     2. cels_register(Clay_Engine) - Clay arena + layout system + render bridge
  *     3. clay_ncurses_renderer_init - ncurses as Clay renderer backend
  *
  *   AppUI root composition observes window state and mounts ClaySurface
@@ -222,7 +222,7 @@ CEL_Build(DemoApp) {
         .root = AppUI
     });
 
-    Clay_Engine_use(NULL);  /* All defaults */
+    cels_register(Clay_Engine);  /* All defaults */
     clay_ncurses_renderer_init(NULL);  /* Default theme */
 
     /* Register input system (global, not lifecycle-scoped) */

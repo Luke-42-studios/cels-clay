@@ -25,14 +25,11 @@
  *   #include <cels-clay/clay_engine.h>
  *
  *   CEL_Build(App) {
- *       Clay_Engine_use(&(ClayEngineConfig){
+ *       Clay_Engine_configure(&(ClayEngineConfig){
  *           .arena_size = 0,  // 0 = use Clay_MinMemorySize() default
  *       });
+ *       cels_register(Clay_Engine);
  *   }
- *
- * Advanced users can initialize subsystems individually:
- *   clay_layout_use();   // Layout system only
- *   clay_render_use();   // Render bridge only
  *
  * Consumers who need Clay layout macros (CLAY(), CLAY_TEXT, etc.)
  * should also include clay.h directly -- it is on the include path
@@ -44,13 +41,12 @@
 
 #include <cels/cels.h>
 #include <stdint.h>
-#include "cels-clay/clay_render.h"
 
 /* ===========================================
  * Clay Engine Config
  * ===========================================
  *
- * Configuration for Clay_Engine_use().
+ * Configuration for Clay_Engine_configure().
  * Pass arena_size = 0 to use Clay_MinMemorySize() default.
  * Pass initial_width/height = 0 to defer dimensions until ClaySurface.
  */
@@ -60,19 +56,17 @@ typedef struct ClayEngineConfig {
     float initial_height;   /* Initial layout height (0 = not set until ClaySurface) */
 } ClayEngineConfig;
 
-/* Module entity ID and init function */
-extern cels_entity_t Clay_Engine;
-extern void Clay_Engine_init(void);
+/* Module declaration */
+CEL_Module(Clay_Engine);
 
-/* Initialize Clay engine module with configuration.
- * Call inside a CEL_Build block. Idempotent -- safe to call multiple times.
+/* State singleton -- cross-TU accessible via cel_read(ClayEngineState) */
+CEL_Define_State(ClayEngineState) {
+    bool initialized;
+};
+
+/* Configure Clay engine before module registration.
+ * Call inside a CEL_Build block before cels_register(Clay_Engine).
  * Pass NULL to use all defaults. */
-extern void Clay_Engine_use(const ClayEngineConfig* config);
-
-/* Composable sub-modules (for advanced users who want individual pieces).
- * NOTE: These do NOT allocate the Clay arena or call Clay_Initialize --
- * the caller is responsible for Clay setup when using these directly. */
-extern void clay_layout_use(void);   /* Layout system only */
-extern void clay_render_use(void);   /* Render bridge only */
+extern void Clay_Engine_configure(const ClayEngineConfig* config);
 
 #endif /* CELS_CLAY_ENGINE_H */
