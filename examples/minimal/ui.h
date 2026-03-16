@@ -64,47 +64,47 @@ static inline void build_ui(void) {
         /* Sidebar: 25% width vertical panel */
         ClayColumn(.width = CLAY_SIZING_PERCENT(0.25f),
                    .height = CLAY_SIZING_GROW(0),
-                   .padding = {.left = 4, .right = 4, .top = 8, .bottom = 8},
-                   .gap = 2,
+                   .padding = {.left = 1, .right = 1, .top = 1, .bottom = 1},
+                   .gap = 0,
                    .bg = UI_BG_SIDEBAR) {
 
-            ClayText(.text = "MENU", .color = UI_ACCENT, .font_size = 16) {}
-            ClaySpacer(.height = CLAY_SIZING_FIT(8)) {}
+            ClayText(.text = "MENU", .color = UI_ACCENT) {}
+            ClaySpacer(.height = CLAY_SIZING_FIT(1)) {}
 
             /* Navigation items */
             ClayRow(.width = CLAY_SIZING_GROW(0),
-                    .padding = {.left = 8, .right = 8, .top = 4, .bottom = 4}) {
+                    .padding = {.left = 1, .right = 1}) {
                 ClayText(.text = "Dashboard", .color = UI_FG_TITLE) {}
             }
             ClayRow(.width = CLAY_SIZING_GROW(0),
-                    .padding = {.left = 8, .right = 8, .top = 4, .bottom = 4}) {
+                    .padding = {.left = 1, .right = 1}) {
                 ClayText(.text = "Settings", .color = UI_FG_TEXT) {}
             }
             ClayRow(.width = CLAY_SIZING_GROW(0),
-                    .padding = {.left = 8, .right = 8, .top = 4, .bottom = 4}) {
+                    .padding = {.left = 1, .right = 1}) {
                 ClayText(.text = "About", .color = UI_FG_DIM) {}
             }
 
             /* Push version label to bottom */
             ClaySpacer() {}
-            ClayText(.text = "v0.6", .color = UI_FG_DIM, .font_size = 12) {}
+            ClayText(.text = "v0.6", .color = UI_FG_DIM) {}
         }
 
         /* Content area: grows to fill remaining space */
         ClayColumn(.width = CLAY_SIZING_GROW(0),
                    .height = CLAY_SIZING_GROW(0),
-                   .padding = {.left = 8, .right = 8, .top = 8, .bottom = 8},
-                   .gap = 8,
+                   .padding = {.left = 1, .right = 1, .top = 1, .bottom = 1},
+                   .gap = 1,
                    .bg = UI_BG_CONTENT) {
 
-            ClayText(.text = "Dashboard", .color = UI_FG_TITLE, .font_size = 20) {}
+            ClayText(.text = "Dashboard", .color = UI_FG_TITLE) {}
 
             /* Welcome card */
             ClayColumn(.width = CLAY_SIZING_GROW(0),
-                       .padding = {.left = 8, .right = 8, .top = 6, .bottom = 6},
-                       .gap = 4,
+                       .padding = {.left = 1, .right = 1, .top = 1, .bottom = 1},
+                       .gap = 0,
                        .bg = UI_BG_CARD) {
-                ClayText(.text = "Welcome", .color = UI_ACCENT, .font_size = 16) {}
+                ClayText(.text = "Welcome", .color = UI_ACCENT) {}
                 ClayText(.text = "This is a minimal cels-clay example rendering"
                          " on both NCurses and SDL3 backends.",
                          .color = UI_FG_TEXT) {}
@@ -112,17 +112,17 @@ static inline void build_ui(void) {
 
             /* Color bar card */
             ClayColumn(.width = CLAY_SIZING_GROW(0),
-                       .padding = {.left = 8, .right = 8, .top = 6, .bottom = 6},
+                       .padding = {.left = 1, .right = 1, .top = 1, .bottom = 1},
                        .bg = UI_BG_CARD) {
-                ClayRow(.gap = 8) {
+                ClayRow(.gap = 1) {
                     ClayBox(.width = CLAY_SIZING_GROW(0),
-                            .height = CLAY_SIZING_FIT(40),
+                            .height = CLAY_SIZING_FIT(3),
                             .bg = UI_ACCENT) {}
                     ClayBox(.width = CLAY_SIZING_GROW(0),
-                            .height = CLAY_SIZING_FIT(40),
+                            .height = CLAY_SIZING_FIT(3),
                             .bg = UI_BG_SIDEBAR) {}
                     ClayBox(.width = CLAY_SIZING_GROW(0),
-                            .height = CLAY_SIZING_FIT(40),
+                            .height = CLAY_SIZING_FIT(3),
                             .bg = UI_BG_CARD) {}
                 }
             }
@@ -130,7 +130,7 @@ static inline void build_ui(void) {
             /* Push footer to bottom */
             ClaySpacer() {}
             ClayText(.text = "cels-clay v0.6 -- Entity-Based UI + Dual Renderers",
-                     .color = UI_FG_DIM, .font_size = 12) {}
+                     .color = UI_FG_DIM) {}
         }
     }
 }

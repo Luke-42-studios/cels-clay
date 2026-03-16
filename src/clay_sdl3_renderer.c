@@ -286,19 +286,16 @@ static void render_sdl3_border(Clay_RenderCommand* cmd) {
  */
 
 static void clay_sdl3_render(cels_iter_t* it) {
-    int count = cels_iter_count(it);
-    ClayRenderableData* data = (ClayRenderableData*)cels_iter_column(
-        it, ClayRenderableData_id, sizeof(ClayRenderableData));
-    if (!data) return;
+    (void)it;
+    /* Read render commands directly from the layout system getter */
+    Clay_RenderCommandArray cmds = cel_clay_get_render_commands();
+    if (cmds.length <= 0) return;
+    if (!ensure_renderer_initialized()) return;
 
-    for (int i = 0; i < count; i++) {
-        if (!data[i].dirty) continue;
-        if (!ensure_renderer_initialized()) continue;
+    /* Reset scissor stack at start of each render pass */
+    scissor_reset();
 
-        /* Reset scissor stack at start of each render pass */
-        scissor_reset();
-
-        Clay_RenderCommandArray cmds = data[i].render_commands;
+    {
 
         for (int32_t j = 0; j < cmds.length; j++) {
             Clay_RenderCommand* cmd = Clay_RenderCommandArray_Get(&cmds, j);

@@ -57,7 +57,7 @@ CEL_Compose(NCursesApp) {
          * cel_watch makes this reactive — recomposes on terminal resize. */
         const struct NCurses_WindowState* ws = cel_read(NCurses_WindowState);
         float w = ws && ws->width > 0 ? (float)ws->width / 2.0f : 40.0f;
-        float h = ws && ws->height > 0 ? (float)ws->height : 24.0f;
+        float h = ws && ws->height > 0 ? (float)ws->height : 30.0f;
         ClaySurface(.width = w, .height = h) {
             build_ui();
         }

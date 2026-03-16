@@ -436,12 +436,13 @@ static void render_border_decor(TUI_DrawContext* ctx, TUI_CellRect rect,
  */
 
 static void clay_ncurses_render(cels_iter_t* it) {
-    int count = cels_iter_count(it);
-    ClayRenderableData* data = (ClayRenderableData*)cels_iter_column(
-        it, ClayRenderableData_id, sizeof(ClayRenderableData));
-    if (!data) return;
-    for (int i = 0; i < count; i++) {
-        if (!data->dirty) continue;
+    (void)it;
+    /* Read render commands directly from the layout system getter
+     * rather than querying the singleton via cels_iter_column. */
+    Clay_RenderCommandArray cmds_check = cel_clay_get_render_commands();
+    if (cmds_check.length <= 0) return;
+
+    {
 
         /* Create draw context from stdscr (full terminal surface).
          * The old TUI_Layer API was removed; stdscr is the fallback
@@ -452,7 +453,7 @@ static void clay_ncurses_render(cels_iter_t* it) {
         /* Reset scissor stack */
         tui_scissor_reset(&bg_ctx);
 
-        Clay_RenderCommandArray cmds = data->render_commands;
+        Clay_RenderCommandArray cmds = cmds_check;
 
         /* Render pass: all commands draw to background surface */
         TUI_DrawContext* ctx = &bg_ctx;
