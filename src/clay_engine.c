@@ -60,6 +60,7 @@ static Clay_Context* g_clay_context = NULL;
  * ============================================================================ */
 
 CEL_State(ClayEngineState);
+static struct ClayEngineState ClayEngineState = {0};
 
 /* ============================================================================
  * Error Handler

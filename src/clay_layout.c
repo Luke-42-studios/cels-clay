@@ -268,8 +268,7 @@ static void emit_container(ecs_world_t* world, ecs_entity_t entity,
     const ClayBorderStyle* border_style = (const ClayBorderStyle*)
         ecs_get_id(world, entity, ClayBorderStyle_id);
 
-    CLAY({
-        .id = _cel_clay_auto_id(0),
+    CLAY(_cel_clay_auto_id(0), {
         .layout = {
             .layoutDirection = config->direction,
             .childGap = config->gap,
@@ -318,8 +317,7 @@ static void emit_text(ecs_world_t* world, ecs_entity_t entity,
 static void emit_spacer(ecs_world_t* world, ecs_entity_t entity,
                           const ClaySpacerConfig* config) {
     (void)world; (void)entity;  /* spacer is a leaf node */
-    CLAY({
-        .id = _cel_clay_auto_id(1),
+    CLAY(_cel_clay_auto_id(1), {
         .layout = {
             .sizing = {
                 .width = _sizing_or_grow(config->width),
@@ -332,8 +330,7 @@ static void emit_spacer(ecs_world_t* world, ecs_entity_t entity,
 static void emit_image(ecs_world_t* world, ecs_entity_t entity,
                          const ClayImageConfig* config) {
     (void)world; (void)entity;  /* image is a leaf node */
-    CLAY({
-        .id = _cel_clay_auto_id(2),
+    CLAY(_cel_clay_auto_id(2), {
         .layout = {
             .sizing = {
                 .width = _sizing_or_grow(config->width),
@@ -406,7 +403,7 @@ static void clay_walk_children(ecs_world_t* world, ecs_entity_t parent) {
     int count = 0;
 
     /* Collect children with their sibling order */
-    ecs_entity_t so_id = (ecs_entity_t)CELS_SiblingOrderID;
+    ecs_entity_t so_id = (ecs_entity_t)CELS_SIBLING_ORDER;
     ecs_iter_t it = ecs_children(world, parent);
     while (ecs_children_next(&it)) {
         for (int i = 0; i < it.count; i++) {
@@ -415,7 +412,7 @@ static void clay_walk_children(ecs_world_t* world, ecs_entity_t parent) {
                 clay_walk_entity(world, it.entities[i]);
                 continue;
             }
-            const CELS_SiblingOrder* so = (const CELS_SiblingOrder*)
+            const cels_sibling_order_t* so = (const cels_sibling_order_t*)
                 ecs_get_id(world, it.entities[i], so_id);
             buf[count].entity = it.entities[i];
             buf[count].order = so ? so->order : (uint32_t)count;
@@ -475,7 +472,7 @@ void _cel_clay_emit_children_range(int start, int count) {
     bool heap = false;
 
     /* First pass: count children */
-    ecs_entity_t so_id = (ecs_entity_t)CELS_SiblingOrderID;
+    ecs_entity_t so_id = (ecs_entity_t)CELS_SIBLING_ORDER;
     ecs_iter_t it = ecs_children(g_layout_world, g_layout_current_entity);
     while (ecs_children_next(&it)) {
         total += it.count;
@@ -493,7 +490,7 @@ void _cel_clay_emit_children_range(int start, int count) {
     it = ecs_children(g_layout_world, g_layout_current_entity);
     while (ecs_children_next(&it)) {
         for (int i = 0; i < it.count && collected < total; i++) {
-            const CELS_SiblingOrder* so = (const CELS_SiblingOrder*)
+            const cels_sibling_order_t* so = (const cels_sibling_order_t*)
                 ecs_get_id(g_layout_world, it.entities[i], so_id);
             buf[collected].entity = it.entities[i];
             buf[collected].order = so ? so->order : (uint32_t)collected;
@@ -535,11 +532,11 @@ bool _cel_clay_emit_child_at_index(int index) {
     _CelSortedChild buf[CEL_CLAY_MAX_SORTED_CHILDREN];
     int count = 0;
 
-    ecs_entity_t so_id = (ecs_entity_t)CELS_SiblingOrderID;
+    ecs_entity_t so_id = (ecs_entity_t)CELS_SIBLING_ORDER;
     ecs_iter_t it = ecs_children(g_layout_world, g_layout_current_entity);
     while (ecs_children_next(&it)) {
         for (int i = 0; i < it.count && count < CEL_CLAY_MAX_SORTED_CHILDREN; i++) {
-            const CELS_SiblingOrder* so = (const CELS_SiblingOrder*)
+            const cels_sibling_order_t* so = (const cels_sibling_order_t*)
                 ecs_get_id(g_layout_world, it.entities[i], so_id);
             buf[count].entity = it.entities[i];
             buf[count].order = so ? so->order : (uint32_t)count;
@@ -644,7 +641,7 @@ static void ClayLayoutSystem_callback(ecs_iter_t* it) {
             /* 4. Walk children inside a TOP_TO_BOTTOM root container.
              * Clay's implicit root uses LEFT_TO_RIGHT (enum default 0),
              * which would arrange widgets horizontally. */
-            CLAY({ .layout = {
+            CLAY_AUTO_ID({ .layout = {
                 .layoutDirection = CLAY_TOP_TO_BOTTOM,
                 .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_GROW(0) }
             }}) {

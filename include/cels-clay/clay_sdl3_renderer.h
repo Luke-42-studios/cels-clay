@@ -51,6 +51,7 @@
 
 #include <stdbool.h>
 #include <cels/cels.h>
+#include <SDL3/SDL.h>
 
 /* ============================================================================
  * Module Declaration
@@ -67,10 +68,12 @@ CEL_Module(Clay_SDL3);
  */
 
 /* Configuration for the SDL3 Clay renderer.
+ * window:    SDL_Window* to create the renderer for. Required.
  * font_path: Path to a .ttf font file for text rendering.
  *            Required -- text rendering fails without a font.
  * font_size: Font size in points. Default: 16 if 0. */
 typedef struct ClaySDL3Config {
+    SDL_Window* window;
     const char* font_path;
     int font_size;
 } ClaySDL3Config;

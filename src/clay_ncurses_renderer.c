@@ -44,14 +44,18 @@
 #include "clay.h"
 #include <cels/cels.h>
 
-#include <cels-ncurses/tui_draw.h>
-#include <cels-ncurses/tui_color.h>
-#include <cels-ncurses/tui_types.h>
-#include <cels-ncurses/tui_scissor.h>
-#include <cels-ncurses/tui_frame.h>
-#include <cels-ncurses/tui_layer.h>
+#include <cels_ncurses.h>
+#include <cels_ncurses_draw.h>
 
-#include <cels-layout/types.h>   /* CEL_TextAttr */
+/* CEL_TextAttr -- text attribute flags unpacked from pointer-packed bits.
+ * Previously in cels-layout/types.h; defined locally to avoid the dependency. */
+typedef struct CEL_TextAttr {
+    bool bold;
+    bool dim;
+    bool underline;
+    bool reverse;
+    bool italic;
+} CEL_TextAttr;
 
 #include <stdlib.h>
 #include <string.h>
@@ -94,8 +98,8 @@ static inline uint32_t _text_attr_to_tui(CEL_TextAttr a) {
 
 static const ClayNcursesTheme* g_theme = NULL;
 
-/* Overlay layer for z-indexed elements (popups, modals, toasts) */
-static TUI_Layer* g_overlay_layer = NULL;
+/* Draw context pointer for the active surface (set by the consumer or
+ * derived from stdscr as a fallback). */
 
 /* ============================================================================
  * Coordinate Mapping
@@ -146,24 +150,9 @@ static TUI_CellRect clay_text_bbox_to_cells(Clay_BoundingBox bbox) {
     return (TUI_CellRect){ .x = cx, .y = cy, .w = cw, .h = ch };
 }
 
-/* ============================================================================
- * Overlay Layer Management
- * ============================================================================
- *
- * Lazily creates a full-screen overlay layer above the background layer.
- * The overlay layer renders Clay commands with zIndex > 0 (popups, modals,
- * toasts). Hidden when no overlay commands exist to avoid stale content.
- */
-
-static TUI_Layer* get_or_create_overlay_layer(void) {
-    if (!g_overlay_layer) {
-        g_overlay_layer = tui_layer_create("overlay", 0, 0, COLS, LINES);
-        if (g_overlay_layer) {
-            tui_layer_raise(g_overlay_layer);
-        }
-    }
-    return g_overlay_layer;
-}
+/* (Overlay layer removed -- the old TUI_Layer API no longer exists.
+ * Clay sorts commands by zIndex so overlay content draws naturally
+ * after background content.) */
 
 /* ============================================================================
  * Rectangle Rendering (REND-01, REND-06)
@@ -446,34 +435,25 @@ static void render_border_decor(TUI_DrawContext* ctx, TUI_CellRect rect,
  *   4. Iterate render commands, dispatch by type
  */
 
-static void clay_ncurses_render(CELS_Iter* it) {
+static void clay_ncurses_render(cels_iter_t* it) {
     int count = cels_iter_count(it);
     ClayRenderableData* data = (ClayRenderableData*)cels_iter_column(
         it, ClayRenderableData_id, sizeof(ClayRenderableData));
     for (int i = 0; i < count; i++) {
         if (!data->dirty) continue;
 
-        /* Get background layer and draw context */
-        TUI_Layer* bg_layer = tui_frame_get_background();
-        if (!bg_layer) continue;
-        TUI_DrawContext bg_ctx = tui_layer_get_draw_context(bg_layer);
+        /* Create draw context from stdscr (full terminal surface).
+         * The old TUI_Layer API was removed; stdscr is the fallback
+         * drawing target for the background surface. */
+        TUI_DrawContext bg_ctx = tui_draw_context_create(
+            stdscr, 0, 0, COLS, LINES);
 
-        /* Reset scissor stack for background */
+        /* Reset scissor stack */
         tui_scissor_reset(&bg_ctx);
 
         Clay_RenderCommandArray cmds = data->render_commands;
 
-        /* Hide overlay layer if it exists — all rendering uses the
-         * background layer. Clay sorts commands by zIndex so overlay
-         * content (popups, modals, toasts) draws after background
-         * content and naturally overwrites the correct cells.
-         * A separate ncurses layer would require transparency support
-         * which ncurses panels don't provide. */
-        if (g_overlay_layer) {
-            tui_layer_hide(g_overlay_layer);
-        }
-
-        /* Render pass: all commands draw to background layer */
+        /* Render pass: all commands draw to background surface */
         TUI_DrawContext* ctx = &bg_ctx;
 
         for (int32_t j = 0; j < cmds.length; j++) {
@@ -633,7 +613,7 @@ CEL_Module(Clay_NCurses, init) {
     ClayRenderableData_register();
     cels_entity_t comp_ids[] = { ClayRenderableData_id };
     cels_system_declare("TUI_ClayRenderable_ClayRenderableData",
-                        CELS_Phase_OnRender, clay_ncurses_render, comp_ids, 1);
+                        OnRender, clay_ncurses_render, comp_ids, 1);
 }
 
 /* ============================================================================
@@ -652,16 +632,17 @@ void clay_ncurses_renderer_set_theme(const ClayNcursesTheme* theme) {
  * Scroll Input Handler (REND-08)
  * ============================================================================
  *
- * Translates CELS_Input key events to Clay scroll deltas. Vim-style bindings
- * are checked first via raw_key; CELS navigation keys (Page Up/Down, arrows)
- * are fallbacks that only apply if no Vim key set a delta.
+ * Translates NCurses_InputState key events to Clay scroll deltas. Vim-style
+ * bindings are checked first via raw keys; ncurses navigation keys
+ * (Page Up/Down, arrows) are fallbacks that only apply if no Vim key set
+ * a delta.
  *
  * Multi-key gg detection: when 'g' is pressed and the PREVIOUS frame also
  * had 'g' as raw_key, this is the gg sequence (scroll to top). A single 'g'
  * with no preceding 'g' does nothing (waits for the second keypress).
  */
 
-void clay_ncurses_handle_scroll_input(const CELS_Input* input,
+void clay_ncurses_handle_scroll_input(const struct NCurses_InputState* input,
                                       float delta_time) {
     Clay_Vector2 scroll_delta = {0.0f, 0.0f};
 
@@ -670,19 +651,28 @@ void clay_ncurses_handle_scroll_input(const CELS_Input* input,
         return;
     }
 
-    /* Phase 1: Vim key bindings (from raw_key) */
-    if (input->has_raw_key) {
-        switch (input->raw_key) {
+    /* Scan all keys pressed this frame */
+    int last_raw_key = 0;
+    for (int ki = 0; ki < input->key_count && ki < 16; ki++) {
+        int key = input->keys[ki];
+        last_raw_key = key;
+
+        /* Phase 1: Vim key bindings */
+        switch (key) {
             case 'j':
-                scroll_delta.y = 1.0f;
+            case KEY_DOWN:
+                if (scroll_delta.y == 0.0f) scroll_delta.y = 1.0f;
                 break;
             case 'k':
-                scroll_delta.y = -1.0f;
+            case KEY_UP:
+                if (scroll_delta.y == 0.0f) scroll_delta.y = -1.0f;
                 break;
             case 4:   /* Ctrl-D (ASCII EOT) */
+            case KEY_NPAGE:
                 scroll_delta.y = 12.0f;
                 break;
             case 21:  /* Ctrl-U (ASCII NAK) */
+            case KEY_PPAGE:
                 scroll_delta.y = -12.0f;
                 break;
             case 'G':
@@ -699,27 +689,9 @@ void clay_ncurses_handle_scroll_input(const CELS_Input* input,
         }
     }
 
-    /* Phase 2: CELS navigation keys (fallback if Vim key didn't fire) */
-    if (scroll_delta.y == 0.0f) {
-        if (input->key_page_down) {
-            scroll_delta.y = 12.0f;
-        } else if (input->key_page_up) {
-            scroll_delta.y = -12.0f;
-        }
-    }
-
-    /* Phase 3: Arrow keys via axis (fallback if nothing else fired) */
-    if (scroll_delta.y == 0.0f) {
-        if (input->axis_left[1] > 0.5f) {
-            scroll_delta.y = 1.0f;   /* Down */
-        } else if (input->axis_left[1] < -0.5f) {
-            scroll_delta.y = -1.0f;  /* Up */
-        }
-    }
-
     /* Update prev_key state for multi-key sequence detection */
-    if (input->has_raw_key) {
-        g_prev_raw_key = input->raw_key;
+    if (input->key_count > 0) {
+        g_prev_raw_key = last_raw_key;
     } else {
         g_prev_raw_key = 0;  /* Reset if no key this frame */
     }

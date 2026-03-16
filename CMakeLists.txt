@@ -15,13 +15,14 @@
 # cels-clay - Clay layout engine integration for CELS framework
 # INTERFACE library: sources compile in the consumer's context
 cmake_minimum_required(VERSION 3.21)
+project(cels-clay VERSION 0.6.0 LANGUAGES C)
 
 # ============================================================================
 # Fetch Clay (single-header layout library)
 # ============================================================================
-# NOTE: We use FetchContent_Populate (NOT MakeAvailable) because Clay's
-# CMakeLists.txt builds example executables requiring raylib/SDL/etc.
-# Populate only fetches the source -- we create our own INTERFACE target.
+# Clay's CMakeLists.txt defaults CLAY_INCLUDE_ALL_EXAMPLES=ON which pulls
+# in raylib/SDL deps. We disable examples before MakeAvailable so only the
+# Clay source tree is fetched — we create our own INTERFACE target below.
 
 include(FetchContent)
 
@@ -38,18 +39,37 @@ else()
         GIT_REPOSITORY https://github.com/nicbarker/clay.git
         GIT_TAG        v0.14
     )
-    FetchContent_GetProperties(clay)
-    if(NOT clay_POPULATED)
-        FetchContent_Populate(clay)
+    # Disable Clay examples to avoid pulling in raylib/SDL/etc.
+    set(CLAY_INCLUDE_ALL_EXAMPLES OFF CACHE BOOL "" FORCE)
+    FetchContent_MakeAvailable(clay)
+endif()
+
+# ============================================================================
+# Sibling dependencies (standalone build support)
+# ============================================================================
+# When built standalone (e.g., opened in CLion), resolve sibling libraries
+# from the parent directory. When included via add_subdirectory from a parent
+# project, these targets already exist and the guards skip.
+
+if(NOT TARGET cels)
+    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../cels ${CMAKE_CURRENT_BINARY_DIR}/_deps/cels EXCLUDE_FROM_ALL)
+endif()
+
+if(NOT TARGET cels-ncurses)
+    if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/../cels-ncurses/CMakeLists.txt)
+        add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../cels-ncurses ${CMAKE_CURRENT_BINARY_DIR}/_deps/cels-ncurses EXCLUDE_FROM_ALL)
+    endif()
+endif()
+
+if(NOT TARGET cels-sdl3)
+    if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/../cels-sdl3/CMakeLists.txt)
+        add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../cels-sdl3 ${CMAKE_CURRENT_BINARY_DIR}/_deps/cels-sdl3 EXCLUDE_FROM_ALL)
     endif()
 endif()
 
 # ============================================================================
 # INTERFACE library target
 # ============================================================================
-# NOTE: For standalone use (outside the CELS repo), a `if(NOT TARGET cels)`
-# guard with FetchContent for CELS can be added here. Currently, the consumer
-# project (CELS root) provides the cels target via add_subdirectory.
 
 add_library(cels-clay INTERFACE)
 add_library(cels::clay ALIAS cels-clay)

@@ -123,50 +123,41 @@ static void scissor_pop(void) {
 static bool ensure_renderer_initialized(void) {
     if (g_renderer) return true;
 
-    /* Query for SDL3_WindowComponent to find a ready window */
-    ecs_world_t* world = cels_get_world(cels_get_context());
-    ecs_iter_t it = ecs_each_id(world, SDL3_WindowComponent_id);
-    while (ecs_each_next(&it)) {
-        for (int i = 0; i < it.count; i++) {
-            const SDL3_WindowComponent* wc = (const SDL3_WindowComponent*)
-                ecs_get_id(world, it.entities[i], SDL3_WindowComponent_id);
-            if (wc && wc->window && wc->state == SDL3_WINDOW_READY) {
-                g_renderer = SDL_CreateRenderer(wc->window, NULL);
-                if (!g_renderer) {
-                    SDL_Log("Clay_SDL3: SDL_CreateRenderer failed: %s",
-                            SDL_GetError());
-                    return false;
-                }
+    /* The app must pass the SDL_Window* via Clay_SDL3_configure.
+     * If not set, try to find one from the config's window pointer. */
+    SDL_Window* window = g_sdl3_config.window;
+    if (!window) return false;  /* No window available yet */
 
-                /* Enable alpha blending by default */
-                SDL_SetRenderDrawBlendMode(g_renderer, SDL_BLENDMODE_BLEND);
-
-                /* Create text engine for TTF rendering */
-                g_text_engine = TTF_CreateRendererTextEngine(g_renderer);
-                if (!g_text_engine) {
-                    SDL_Log("Clay_SDL3: TTF_CreateRendererTextEngine failed: %s",
-                            SDL_GetError());
-                }
-
-                /* Load TTF font now that we have renderer context */
-                if (g_sdl3_config.font_path) {
-                    int size = g_sdl3_config.font_size > 0
-                        ? g_sdl3_config.font_size : 16;
-                    g_font = TTF_OpenFont(g_sdl3_config.font_path, (float)size);
-                    if (!g_font) {
-                        SDL_Log("Clay_SDL3: TTF_OpenFont('%s') failed: %s",
-                                g_sdl3_config.font_path, SDL_GetError());
-                    }
-                } else {
-                    SDL_Log("Clay_SDL3: No font_path configured. "
-                            "Text rendering will be disabled.");
-                }
-
-                return true;
-            }
-        }
+    g_renderer = SDL_CreateRenderer(window, NULL);
+    if (!g_renderer) {
+        SDL_Log("Clay_SDL3: SDL_CreateRenderer failed: %s", SDL_GetError());
+        return false;
     }
-    return false;  /* No ready window found yet */
+
+    /* Enable alpha blending by default */
+    SDL_SetRenderDrawBlendMode(g_renderer, SDL_BLENDMODE_BLEND);
+
+    /* Create text engine for TTF rendering */
+    g_text_engine = TTF_CreateRendererTextEngine(g_renderer);
+    if (!g_text_engine) {
+        SDL_Log("Clay_SDL3: TTF_CreateRendererTextEngine failed: %s",
+                SDL_GetError());
+    }
+
+    /* Load TTF font */
+    if (g_sdl3_config.font_path) {
+        int size = g_sdl3_config.font_size > 0 ? g_sdl3_config.font_size : 16;
+        g_font = TTF_OpenFont(g_sdl3_config.font_path, (float)size);
+        if (!g_font) {
+            SDL_Log("Clay_SDL3: TTF_OpenFont('%s') failed: %s",
+                    g_sdl3_config.font_path, SDL_GetError());
+        }
+    } else {
+        SDL_Log("Clay_SDL3: No font_path configured. "
+                "Text rendering will be disabled.");
+    }
+
+    return true;
 }
 
 /* ============================================================================
@@ -391,7 +382,7 @@ CEL_Module(Clay_SDL3, init) {
     ClayRenderableData_register();
     cels_entity_t comp_ids[] = { ClayRenderableData_id };
     cels_system_declare("SDL3_ClayRenderable_ClayRenderableData",
-                        CELS_Phase_OnRender, clay_sdl3_render, comp_ids, 1);
+                        OnRender, clay_sdl3_render, comp_ids, 1);
 }
 
 /* ============================================================================

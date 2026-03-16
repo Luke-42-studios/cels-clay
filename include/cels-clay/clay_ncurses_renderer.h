@@ -60,7 +60,6 @@
 
 #include <stdbool.h>
 #include <cels/cels.h>
-#include <cels/backend.h>
 
 /* ============================================================================
  * ClayNcursesTheme - Visual appearance configuration
@@ -144,6 +143,9 @@ extern void Clay_NCurses_configure(const ClayNcursesTheme* theme);
  * Re-initializes border character conversions. */
 extern void clay_ncurses_renderer_set_theme(const ClayNcursesTheme* theme);
 
+/* Forward declaration for NCurses input state (defined in cels_ncurses.h) */
+struct NCurses_InputState;
+
 /* Process keyboard input for Clay scroll containers.
  *
  * Maps Vim-style key bindings to scroll deltas and feeds them to
@@ -161,9 +163,9 @@ extern void clay_ncurses_renderer_set_theme(const ClayNcursesTheme* theme);
  * This is a plain function the app calls explicitly -- NOT an ECS system.
  * The app controls which container receives scroll input (focus management).
  *
- * @param input     CELS_Input from the current frame (NULL-safe: sends zero delta)
+ * @param input     NCurses_InputState from the current frame (NULL-safe: sends zero delta)
  * @param delta_time Time elapsed since last frame in seconds */
-extern void clay_ncurses_handle_scroll_input(const CELS_Input* input,
+extern void clay_ncurses_handle_scroll_input(const struct NCurses_InputState* input,
                                              float delta_time);
 
 #endif /* CELS_CLAY_NCURSES_RENDERER_H */
