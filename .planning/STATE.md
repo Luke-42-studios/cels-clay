@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-03-15)
 ## Current Position
 
 Phase: 6 of 11 (Module Modernization)
-Plan: 0 of TBD in current phase
-Status: Ready to plan
-Last activity: 2026-03-15 -- v0.6 roadmap created
+Plan: 1 of 1 in current phase
+Status: Phase complete
+Last activity: 2026-03-16 -- Completed 06-01-PLAN.md
 
-Progress: [..........] 0% (v0.6 phases 6-11)
+Progress: [##........] 17% (v0.6 phases 6-11, 1/6 phases complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 10 (v0.5 phases 1-4)
-- Average duration: 3.5 min
-- Total execution time: 35 min
+- Total plans completed: 11 (v0.5 phases 1-4 + v0.6 phase 6)
+- Average duration: 4.2 min
+- Total execution time: 46 min
 
 **By Phase:**
 
@@ -32,10 +32,11 @@ Progress: [..........] 0% (v0.6 phases 6-11)
 | 3 | 2 | 5 min | 2.5 min |
 | 4 | 2 | 5 min | 2.5 min |
 | 5 | 1 | 12 min | 12 min |
+| 6 | 1 | 11 min | 11 min |
 
 **Recent Trend:**
-- Last 5 plans: 03-02 (2 min), 04-01 (4 min), 04-02 (1 min), 05-01 (12 min)
-- Trend: Stable (05-01 longer due to first consumer build)
+- Last 5 plans: 04-01 (4 min), 04-02 (1 min), 05-01 (12 min), 06-01 (11 min)
+- Trend: Stable (06-01 comparable to 05-01 due to multi-file modernization)
 
 *Updated after each plan completion*
 
@@ -50,6 +51,10 @@ Recent decisions affecting current work:
 - [v0.6 Roadmap]: Entity primitives defined before layout rewrite so tree walk has components to read
 - [v0.6 Roadmap]: NCurses renderer migration before SDL3 renderer -- establishes renderer contract that SDL3 follows
 - [v0.6 Roadmap]: Renderer selection (REND-08) and conditional compilation (REND-09) grouped with NCurses migration (infrastructure phase)
+- [06-01]: Arena init in CEL_Module body (not lifecycle observer) -- simpler for single-instance Clay
+- [06-01]: Clay_Engine_configure() replaces Clay_Engine_use() -- config before cels_register(Clay_Engine)
+- [06-01]: CEL_Lifecycle on_destroy for cleanup replaces atexit()
+- [06-01]: Retired clay_layout_use() and clay_render_use() sub-module API
 
 ### Pending Todos
 
@@ -63,6 +68,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-15
-Stopped at: v0.6 roadmap created. Next: plan Phase 6.
+Last session: 2026-03-16
+Stopped at: Completed 06-01-PLAN.md (Module Modernization). Phase 6 complete.
 Resume file: None
