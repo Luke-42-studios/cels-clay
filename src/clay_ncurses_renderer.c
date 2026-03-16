@@ -92,7 +92,7 @@ static inline uint32_t _text_attr_to_tui(CEL_TextAttr a) {
  * Static State
  * ============================================================================ */
 
-static const ClayNcursesTheme* g_theme = &CLAY_NCURSES_THEME_DEFAULT;
+static const ClayNcursesTheme* g_theme = NULL;
 
 /* Overlay layer for z-indexed elements (popups, modals, toasts) */
 static TUI_Layer* g_overlay_layer = NULL;
@@ -619,20 +619,29 @@ static Clay_Dimensions clay_ncurses_measure_text(
 static int g_prev_raw_key = 0;
 
 /* ============================================================================
- * Public API
+ * Module Definition
  * ============================================================================ */
 
-void clay_ncurses_renderer_init(const ClayNcursesTheme* theme) {
-    g_theme = theme ? theme : &CLAY_NCURSES_THEME_DEFAULT;
+CEL_Module(Clay_NCurses, init) {
+    /* Use stored theme (from Clay_NCurses_configure) or default */
+    if (!g_theme) g_theme = &CLAY_NCURSES_THEME_DEFAULT;
 
     /* Register text measurement callback */
     Clay_SetMeasureTextFunction(clay_ncurses_measure_text, NULL);
 
-    /* Register render system directly (Feature/Provider retired in v0.4) */
+    /* Register render system at OnRender phase */
     ClayRenderableData_register();
     cels_entity_t comp_ids[] = { ClayRenderableData_id };
     cels_system_declare("TUI_ClayRenderable_ClayRenderableData",
                         CELS_Phase_OnRender, clay_ncurses_render, comp_ids, 1);
+}
+
+/* ============================================================================
+ * Public API
+ * ============================================================================ */
+
+void Clay_NCurses_configure(const ClayNcursesTheme* theme) {
+    g_theme = theme ? theme : &CLAY_NCURSES_THEME_DEFAULT;
 }
 
 void clay_ncurses_renderer_set_theme(const ClayNcursesTheme* theme) {

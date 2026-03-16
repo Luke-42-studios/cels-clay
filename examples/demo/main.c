@@ -28,7 +28,7 @@
  *   CEL_Build(DemoApp) initializes three modules:
  *     1. TUI_Engine_use  - ncurses window + input + frame pipeline
  *     2. cels_register(Clay_Engine) - Clay arena + layout system + render bridge
- *     3. clay_ncurses_renderer_init - ncurses as Clay renderer backend
+ *     3. cels_register(Clay_NCurses) - ncurses as Clay renderer backend
  *
  *   AppUI root composition observes window state and mounts ClaySurface
  *   with aspect-ratio-adjusted dimensions. Inside: AppShell with title
@@ -206,7 +206,7 @@ CEL_Root(AppUI, TUI_EngineContext) {
  * CEL_Build initializes the three module layers in order:
  *   1. TUI engine (ncurses session, input provider, frame pipeline)
  *   2. Clay engine (arena allocation, layout system, render bridge)
- *   3. ncurses renderer (text measurement, render provider)
+ *   3. Clay NCurses renderer module (text measurement, render provider)
  *
  * Then sets initial application state and registers the input system.
  */
@@ -222,8 +222,7 @@ CEL_Build(DemoApp) {
         .root = AppUI
     });
 
-    cels_register(Clay_Engine);  /* All defaults */
-    clay_ncurses_renderer_init(NULL);  /* Default theme */
+    cels_register(Clay_Engine, Clay_NCurses);  /* All defaults, default theme */
 
     /* Register input system (global, not lifecycle-scoped) */
     CEL_Register(DemoInputSystem);

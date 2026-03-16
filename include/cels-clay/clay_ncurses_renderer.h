@@ -15,11 +15,11 @@
  */
 
 /*
- * Clay ncurses Renderer - Terminal renderer for Clay render commands
+ * Clay NCurses Renderer Module - Terminal renderer for Clay render commands
  *
  * Translates Clay_RenderCommandArray into visible terminal output using
- * cels-ncurses drawing primitives. Registers as a render backend via
- * cels_system_declare().
+ * cels-ncurses drawing primitives. Registered as a CEL_Module for
+ * automatic initialization via cels_register().
  *
  * The renderer handles 5 Clay command types:
  *   RECTANGLE    -> tui_draw_fill_rect (filled background)
@@ -36,15 +36,18 @@
  * Usage:
  *   #include <cels-clay/clay_ncurses_renderer.h>
  *
- *   // In module init, after cels_register(Clay_Engine):
- *   clay_ncurses_renderer_init(NULL);  // NULL = default theme
+ *   CEL_Build(App) {
+ *       cels_register(Clay_Engine, Clay_NCurses);
+ *       // Optional: Clay_NCurses_configure(&custom_theme); before register
+ *   }
  *
- *   // Or with custom theme:
+ *   // Or with custom theme (call before cels_register):
  *   static const ClayNcursesTheme my_theme = {
  *       .border = { ... },
  *       .cell_aspect_ratio = 1.8f,
  *   };
- *   clay_ncurses_renderer_init(&my_theme);
+ *   Clay_NCurses_configure(&my_theme);
+ *   cels_register(Clay_NCurses);
  *
  * NOTE: This header does NOT include ncurses or cels-ncurses headers.
  * The theme struct is pure C data. The renderer source includes ncurses
@@ -123,20 +126,19 @@ static const ClayNcursesTheme CLAY_NCURSES_THEME_DEFAULT = {
 };
 
 /* ============================================================================
+ * Module Declaration
+ * ============================================================================ */
+
+CEL_Module(Clay_NCurses);
+
+/* ============================================================================
  * Renderer API
  * ============================================================================ */
 
-/* Initialize the ncurses Clay renderer and register as a ClayRenderable
- * provider. Pass NULL to use CLAY_NCURSES_THEME_DEFAULT.
- *
- * This function:
- *   1. Stores the theme pointer
- *   2. Converts theme UTF-8 border strings to cchar_t for ncurses
- *   3. Registers text measurement callback via Clay_SetMeasureTextFunction
- *   4. Registers render system via cels_system_declare()
- *
- * Call after cels_register(Clay_Engine) and cels-ncurses initialization. */
-extern void clay_ncurses_renderer_init(const ClayNcursesTheme* theme);
+/* Configure NCurses Clay renderer theme before module registration.
+ * Call before cels_register(Clay_NCurses). Pass NULL for default theme.
+ * If not called, default theme is used. */
+extern void Clay_NCurses_configure(const ClayNcursesTheme* theme);
 
 /* Change the renderer theme at runtime. Pass NULL for default theme.
  * Re-initializes border character conversions. */
