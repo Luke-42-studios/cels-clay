@@ -443,10 +443,11 @@ static void clay_ncurses_render(cels_iter_t* it) {
     if (cmds_check.length <= 0) return;
 
     {
+        /* Clear screen before drawing — no TUISurface means no automatic
+         * clear/refresh cycle. We own the full stdscr lifecycle here. */
+        werase(stdscr);
 
-        /* Create draw context from stdscr (full terminal surface).
-         * The old TUI_Layer API was removed; stdscr is the fallback
-         * drawing target for the background surface. */
+        /* Create draw context from stdscr (full terminal surface). */
         TUI_DrawContext bg_ctx = tui_draw_context_create(
             stdscr, 0, 0, COLS, LINES);
 
@@ -505,6 +506,10 @@ static void clay_ncurses_render(cels_iter_t* it) {
                     break;  /* IMAGE, CUSTOM, NONE -- skip silently */
             }
         }
+
+        /* Present the frame */
+        wnoutrefresh(stdscr);
+        doupdate();
     }
 }
 
