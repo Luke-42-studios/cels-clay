@@ -105,7 +105,15 @@ static void ClaySurface_factory(void* _raw_props) {
     ClaySurface_impl(_p);
 }
 static void ClaySurface_impl(ClaySurface_props props) {
+    /* Use cel_has for first-time component attachment, then force-update
+     * on recomposition. cel_has skips writes on reused entities (by design,
+     * to preserve system mutations). But ClaySurfaceConfig is composition-
+     * driven -- dimensions come from reactive props (e.g. terminal size),
+     * so we must overwrite on every recomposition. */
     cel_has(ClaySurfaceConfig, .width = props.width, .height = props.height);
+    cels_entity_set_component(cels_get_current_entity(), ClaySurfaceConfig_id,
+        &(ClaySurfaceConfig){ .width = props.width, .height = props.height },
+        sizeof(ClaySurfaceConfig));
 }
 
 #define ClaySurface(...) cel_init(ClaySurface, __VA_ARGS__)
