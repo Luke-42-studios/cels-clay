@@ -104,21 +104,8 @@ static void ClaySurface_factory(void* _raw_props) {
     if (_raw_props) _p = *(ClaySurface_props*)_raw_props;
     ClaySurface_impl(_p);
 }
-/* cel_has skips writes on reused entities (CELS design: preserves system
- * mutations). ClaySurfaceConfig is composition-driven (dimensions from
- * reactive props like terminal size), so we use cel_has for first-time
- * attachment + cels_entity_set_component for updates on recomposition.
- * TODO: propose cel_set(Name, ...) macro to CELS for this pattern. */
-#define _clay_surface_set(entity, w, h)                                        \
-    do {                                                                        \
-        ClaySurfaceConfig _cfg = { .width = (w), .height = (h) };              \
-        cels_entity_set_component((entity), ClaySurfaceConfig_id,              \
-                                  &_cfg, sizeof(ClaySurfaceConfig));           \
-    } while (0)
-
 static void ClaySurface_impl(ClaySurface_props props) {
     cel_has(ClaySurfaceConfig, .width = props.width, .height = props.height);
-    _clay_surface_set(cels_get_current_entity(), props.width, props.height);
 }
 
 #define ClaySurface(...) cel_init(ClaySurface, __VA_ARGS__)
