@@ -128,10 +128,14 @@ static bool ensure_renderer_initialized(void) {
     SDL_Window* window = g_sdl3_config.window;
     if (!window) return false;  /* No window available yet */
 
-    g_renderer = SDL_CreateRenderer(window, NULL);
+    /* Use existing renderer if window already has one (e.g., from cels-sdl3) */
+    g_renderer = SDL_GetRenderer(window);
     if (!g_renderer) {
-        SDL_Log("Clay_SDL3: SDL_CreateRenderer failed: %s", SDL_GetError());
-        return false;
+        g_renderer = SDL_CreateRenderer(window, NULL);
+        if (!g_renderer) {
+            SDL_Log("Clay_SDL3: SDL_CreateRenderer failed: %s", SDL_GetError());
+            return false;
+        }
     }
 
     /* Enable alpha blending by default */
@@ -177,6 +181,13 @@ static Clay_Dimensions clay_sdl3_measure_text(
     void* userData)
 {
     (void)userData;
+
+    /* Lazy-init: if font isn't loaded yet, try to initialize the renderer
+     * (which loads the font). This handles the case where text measurement
+     * is called before the first render frame. */
+    if (!g_font) {
+        ensure_renderer_initialized();
+    }
 
     if (!g_font || text.length <= 0 || !text.chars) {
         return (Clay_Dimensions){0, 0};
@@ -307,14 +318,14 @@ static void clay_sdl3_render(cels_iter_t* it) {
 
             switch (cmd->commandType) {
                 case CLAY_RENDER_COMMAND_TYPE_RECTANGLE: {
-                    /* Corner radius rendering deferred to v2.
-                     * v2 would use SDL_RenderGeometry for smooth
-                     * rounded corners via triangle fan tessellation. */
                     Clay_Color c = cmd->renderData.rectangle.backgroundColor;
                     SDL_SetRenderDrawBlendMode(g_renderer, SDL_BLENDMODE_BLEND);
                     SDL_SetRenderDrawColor(g_renderer,
                         (uint8_t)c.r, (uint8_t)c.g,
                         (uint8_t)c.b, (uint8_t)c.a);
+                    /* Clamp rect to reasonable size for SDL */
+                    if (rect.w > 10000) rect.w = 10000;
+                    if (rect.h > 10000) rect.h = 10000;
                     SDL_RenderFillRect(g_renderer, &rect);
                     break;
                 }
@@ -380,7 +391,7 @@ CEL_Module(Clay_SDL3, init) {
     ClayRenderableData_register();
     cels_entity_t comp_ids[] = { ClayRenderableData_id };
     cels_system_declare("SDL3_ClayRenderable_ClayRenderableData",
-                        OnRender, clay_sdl3_render, comp_ids, 1);
+                        CELS_ON_RENDER, clay_sdl3_render, comp_ids, 1);
 }
 
 /* ============================================================================
