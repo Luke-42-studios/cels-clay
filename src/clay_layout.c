@@ -283,7 +283,14 @@ static void emit_container(ecs_world_t* world, ecs_entity_t entity,
             },
             .childAlignment = config->alignment
         },
-        .backgroundColor = config->bg
+        .backgroundColor = config->bg,
+        /* D-05 Option A: stamp the composing entity ID so hit-test systems can
+         * map render commands back to their owning ECS entity. The value is
+         * value-encoded (not a real pointer), so there is no use-after-free on
+         * the stamp itself. Clay propagates userData from declaration to the
+         * resulting Clay_RenderCommand automatically. Text leaves are NOT
+         * stamped -- their container receives clicks. */
+        .userData = (void*)(uintptr_t)g_layout_current_entity
     };
     for (CLAY__ELEMENT_DEFINITION_LATCH = (Clay__OpenElementWithId(_cel_clay_auto_id(0)), Clay__ConfigureOpenElement(decl), 0);
          CLAY__ELEMENT_DEFINITION_LATCH < 1;
