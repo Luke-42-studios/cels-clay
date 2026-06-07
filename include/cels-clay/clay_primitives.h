@@ -170,13 +170,7 @@ static void ClayRow_factory(void* _raw_props) {
     if (_raw_props) _p = *(ClayRow_props*)_raw_props;
     ClayRow_impl(_p);
 }
-/* Lifecycle tag: cels-clay primitives are body-added from outer compositions;
- * their lifetime is owned by the outer composition's body block, not by any
- * factory call. Tag them so the cels reconciler's mark-and-sweep (see
- * pre_mark_lifecycled_children in composition_engine.c) does not delete
- * them on parent recomposition. */
 static void ClayRow_impl(ClayRow_props props) {
-    cels_mark_lifecycled_root(cels_get_current_entity());
     cel_has(ClayContainerConfig,
         .direction = CLAY_LEFT_TO_RIGHT,
         .gap = props.gap,
@@ -214,7 +208,6 @@ static void ClayColumn_factory(void* _raw_props) {
     ClayColumn_impl(_p);
 }
 static void ClayColumn_impl(ClayColumn_props props) {
-    cels_mark_lifecycled_root(cels_get_current_entity());
     cel_has(ClayContainerConfig,
         .direction = CLAY_TOP_TO_BOTTOM,
         .gap = props.gap,
@@ -256,7 +249,6 @@ static void ClayBox_factory(void* _raw_props) {
     ClayBox_impl(_p);
 }
 static void ClayBox_impl(ClayBox_props props) {
-    cels_mark_lifecycled_root(cels_get_current_entity());
     cel_has(ClayContainerConfig,
         .direction = CLAY_TOP_TO_BOTTOM,
         .padding = props.padding,
@@ -303,7 +295,6 @@ static void ClayText_factory(void* _raw_props) {
     ClayText_impl(_p);
 }
 static void ClayText_impl(ClayText_props props) {
-    cels_mark_lifecycled_root(cels_get_current_entity());
     cel_has(ClayTextConfig,
         .text = props.text,
         .color = (props.color.r || props.color.g || props.color.b || props.color.a)
@@ -339,7 +330,6 @@ static void ClaySpacer_factory(void* _raw_props) {
     ClaySpacer_impl(_p);
 }
 static void ClaySpacer_impl(ClaySpacer_props props) {
-    cels_mark_lifecycled_root(cels_get_current_entity());
     cel_has(ClaySpacerConfig,
         .width = props.width,
         .height = props.height
@@ -371,7 +361,6 @@ static void ClayImage_factory(void* _raw_props) {
     ClayImage_impl(_p);
 }
 static void ClayImage_impl(ClayImage_props props) {
-    cels_mark_lifecycled_root(cels_get_current_entity());
     cel_has(ClayImageConfig,
         .source = props.source,
         .source_width = props.source_width,
