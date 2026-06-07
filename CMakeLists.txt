@@ -93,10 +93,13 @@ target_include_directories(cels-clay INTERFACE
     # TEMPORARY: cels-clay headers include <nucleus/nucleus_types.h> for wrapper types.
     # This coupling is resolved in Phase 3 (MOD-01) via a proper module split that
     # moves nucleus_types.h to a standalone lib (e.g. nucleus-types) with no engine deps.
-    # In the Nucleus superbuild, CMAKE_SOURCE_DIR resolves to the workspace root;
-    # standalone cels-clay builds (without the workspace) will need to provide
+    # Path is relative to cels-clay's own location so it is correct regardless of which
+    # project is the superbuild top-level (CMAKE_SOURCE_DIR is unreliable here: in the
+    # Nucleus superbuild it resolves to engines/Nucleus, not the workspace root). In the
+    # workspace layout, libs/cels-clay and engines/Nucleus are fixed siblings.
+    # Standalone cels-clay builds (without the workspace) will need to provide
     # NUCLEUS_TYPES_INCLUDE_DIR or pull nucleus-types directly (Phase 3 concern).
-    ${CMAKE_SOURCE_DIR}/engines/Nucleus/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../engines/Nucleus/include
 )
 
 target_link_libraries(cels-clay INTERFACE

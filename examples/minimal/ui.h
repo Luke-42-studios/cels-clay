@@ -23,14 +23,14 @@
  * Color Palette -- high contrast, visible on dark terminals and windows
  * ============================================================================ */
 
-#define UI_BG_DARK     (Clay_Color){30, 30, 40, 255}
-#define UI_BG_SIDEBAR  (Clay_Color){40, 45, 60, 255}
-#define UI_BG_CONTENT  (Clay_Color){35, 38, 50, 255}
-#define UI_BG_CARD     (Clay_Color){50, 55, 75, 255}
-#define UI_FG_TITLE    (Clay_Color){220, 220, 240, 255}
-#define UI_FG_TEXT     (Clay_Color){180, 185, 200, 255}
-#define UI_FG_DIM      (Clay_Color){120, 125, 140, 255}
-#define UI_ACCENT      (Clay_Color){100, 140, 220, 255}
+#define UI_BG_DARK     (nucleus_color_t){30, 30, 40, 255}
+#define UI_BG_SIDEBAR  (nucleus_color_t){40, 45, 60, 255}
+#define UI_BG_CONTENT  (nucleus_color_t){35, 38, 50, 255}
+#define UI_BG_CARD     (nucleus_color_t){50, 55, 75, 255}
+#define UI_FG_TITLE    (nucleus_color_t){220, 220, 240, 255}
+#define UI_FG_TEXT     (nucleus_color_t){180, 185, 200, 255}
+#define UI_FG_DIM      (nucleus_color_t){120, 125, 140, 255}
+#define UI_ACCENT      (nucleus_color_t){100, 140, 220, 255}
 
 /* ============================================================================
  * build_ui() -- constructs the complete UI entity tree
@@ -57,30 +57,30 @@
  */
 static inline void build_ui(void) {
     /* Root: horizontal layout filling all available space */
-    ClayRow(.width = CLAY_SIZING_GROW(0),
-            .height = CLAY_SIZING_GROW(0),
+    ClayRow(.width = NUCLEUS_SIZE_GROW(0),
+            .height = NUCLEUS_SIZE_GROW(0),
             .bg = UI_BG_DARK) {
 
         /* Sidebar: 25% width vertical panel */
-        ClayColumn(.width = CLAY_SIZING_PERCENT(0.25f),
-                   .height = CLAY_SIZING_GROW(0),
+        ClayColumn(.width = NUCLEUS_SIZE_PERCENT(0.25f),
+                   .height = NUCLEUS_SIZE_GROW(0),
                    .padding = {.left = 1, .right = 1, .top = 1, .bottom = 1},
                    .gap = 0,
                    .bg = UI_BG_SIDEBAR) {
 
             ClayText(.text = "MENU", .color = UI_ACCENT) {}
-            ClaySpacer(.height = CLAY_SIZING_FIT(1)) {}
+            ClaySpacer(.height = NUCLEUS_SIZE_FIT(1)) {}
 
             /* Navigation items */
-            ClayRow(.width = CLAY_SIZING_GROW(0),
+            ClayRow(.width = NUCLEUS_SIZE_GROW(0),
                     .padding = {.left = 1, .right = 1}) {
                 ClayText(.text = "Dashboard", .color = UI_FG_TITLE) {}
             }
-            ClayRow(.width = CLAY_SIZING_GROW(0),
+            ClayRow(.width = NUCLEUS_SIZE_GROW(0),
                     .padding = {.left = 1, .right = 1}) {
                 ClayText(.text = "Settings", .color = UI_FG_TEXT) {}
             }
-            ClayRow(.width = CLAY_SIZING_GROW(0),
+            ClayRow(.width = NUCLEUS_SIZE_GROW(0),
                     .padding = {.left = 1, .right = 1}) {
                 ClayText(.text = "About", .color = UI_FG_DIM) {}
             }
@@ -91,8 +91,8 @@ static inline void build_ui(void) {
         }
 
         /* Content area: grows to fill remaining space */
-        ClayColumn(.width = CLAY_SIZING_GROW(0),
-                   .height = CLAY_SIZING_GROW(0),
+        ClayColumn(.width = NUCLEUS_SIZE_GROW(0),
+                   .height = NUCLEUS_SIZE_GROW(0),
                    .padding = {.left = 1, .right = 1, .top = 1, .bottom = 1},
                    .gap = 1,
                    .bg = UI_BG_CONTENT) {
@@ -100,7 +100,7 @@ static inline void build_ui(void) {
             ClayText(.text = "Dashboard", .color = UI_FG_TITLE) {}
 
             /* Welcome card */
-            ClayColumn(.width = CLAY_SIZING_GROW(0),
+            ClayColumn(.width = NUCLEUS_SIZE_GROW(0),
                        .padding = {.left = 1, .right = 1, .top = 1, .bottom = 1},
                        .gap = 0,
                        .bg = UI_BG_CARD) {
@@ -111,18 +111,18 @@ static inline void build_ui(void) {
             }
 
             /* Color bar card */
-            ClayColumn(.width = CLAY_SIZING_GROW(0),
+            ClayColumn(.width = NUCLEUS_SIZE_GROW(0),
                        .padding = {.left = 1, .right = 1, .top = 1, .bottom = 1},
                        .bg = UI_BG_CARD) {
                 ClayRow(.gap = 1) {
-                    ClayBox(.width = CLAY_SIZING_GROW(0),
-                            .height = CLAY_SIZING_FIT(3),
+                    ClayBox(.width = NUCLEUS_SIZE_GROW(0),
+                            .height = NUCLEUS_SIZE_FIT(3),
                             .bg = UI_ACCENT) {}
-                    ClayBox(.width = CLAY_SIZING_GROW(0),
-                            .height = CLAY_SIZING_FIT(3),
+                    ClayBox(.width = NUCLEUS_SIZE_GROW(0),
+                            .height = NUCLEUS_SIZE_FIT(3),
                             .bg = UI_BG_SIDEBAR) {}
-                    ClayBox(.width = CLAY_SIZING_GROW(0),
-                            .height = CLAY_SIZING_FIT(3),
+                    ClayBox(.width = NUCLEUS_SIZE_GROW(0),
+                            .height = NUCLEUS_SIZE_FIT(3),
                             .bg = UI_BG_CARD) {}
                 }
             }
