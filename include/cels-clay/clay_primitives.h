@@ -55,8 +55,81 @@
 
 #include <cels/cels.h>
 #include "clay.h"
+#include <nucleus/nucleus_types.h>  /* nucleus_color_t, nucleus_padding_t, nucleus_size_t */
 #include <stdbool.h>
 #include <stdint.h>
+
+/* ============================================================================
+ * ABI-drift guards (file-scope exception: clay_primitives.h already includes
+ * clay.h, so _Static_assert guards are permitted here — see PATTERNS.md).
+ * Fail the build at compile time if Clay changes its struct layout before we
+ * update nucleus_types.h. No size assert for nucleus_size_t (NOT ABI-identical).
+ * ============================================================================ */
+_Static_assert(sizeof(nucleus_color_t) == sizeof(Clay_Color),
+    "nucleus_color_t layout drifted from Clay_Color -- update nucleus_types.h");
+_Static_assert(sizeof(nucleus_padding_t) == sizeof(Clay_Padding),
+    "nucleus_padding_t layout drifted from Clay_Padding -- update nucleus_types.h");
+
+/* ============================================================================
+ * Type-conversion helpers — nucleus_*_t → Clay_* at the boundary.
+ * Must be static inline: this header is included by multiple TUs (INTERFACE
+ * library pattern) — multiple-definition errors if not static.
+ * ============================================================================ */
+
+/* to_clay_color: reinterpret nucleus_color_t as Clay_Color via memcpy.
+ * ABI-identical — verified by _Static_assert above. */
+static inline Clay_Color to_clay_color(nucleus_color_t c) {
+    Clay_Color r;
+    __builtin_memcpy(&r, &c, sizeof(r));
+    return r;
+}
+
+/* to_clay_padding: reinterpret nucleus_padding_t as Clay_Padding via memcpy.
+ * ABI-identical — verified by _Static_assert above. */
+static inline Clay_Padding to_clay_padding(nucleus_padding_t p) {
+    Clay_Padding r;
+    __builtin_memcpy(&r, &p, sizeof(r));
+    return r;
+}
+
+/* to_clay_sizing: construct Clay_SizingAxis from nucleus_size_t.
+ * NOT a memcpy — nucleus_size_t is NOT ABI-identical to Clay_SizingAxis.
+ *
+ * nucleus_size_t kind mapping → Clay__SizingType:
+ *   0 (FIT)     → CLAY__SIZING_TYPE_FIT     (wraps content, no value needed)
+ *   1 (GROW)    → CLAY__SIZING_TYPE_GROW    (fill available space)
+ *   2 (FIXED)   → CLAY__SIZING_TYPE_FIXED   (exact pixel size via minMax)
+ *   3 (PERCENT) → CLAY__SIZING_TYPE_PERCENT (fraction of parent via .percent)
+ *   other       → CLAY__SIZING_TYPE_FIT     (safe fallback)
+ *
+ * Clay__SizingType enum values (confirmed from clay.h):
+ *   CLAY__SIZING_TYPE_FIT=0, GROW=1, PERCENT=2, FIXED=3
+ * nucleus_size_t kind=2 (FIXED) maps to Clay value 3 -- NOT a direct cast.
+ */
+static inline Clay_SizingAxis to_clay_sizing(nucleus_size_t s) {
+    Clay_SizingAxis ax = {0};
+    switch (s.kind) {
+        case 0: /* FIT */
+            ax.type = CLAY__SIZING_TYPE_FIT;
+            break;
+        case 1: /* GROW */
+            ax.type = CLAY__SIZING_TYPE_GROW;
+            break;
+        case 2: /* FIXED */
+            ax.type = CLAY__SIZING_TYPE_FIXED;
+            ax.size.minMax.min = s.value;
+            ax.size.minMax.max = s.value;
+            break;
+        case 3: /* PERCENT */
+            ax.type = CLAY__SIZING_TYPE_PERCENT;
+            ax.size.percent = s.value;
+            break;
+        default: /* unknown kind — safe fallback to FIT */
+            ax.type = CLAY__SIZING_TYPE_FIT;
+            break;
+    }
+    return ax;
+}
 
 /* ============================================================================
  * Component Structs
@@ -64,7 +137,11 @@
 
 /* ClayContainerConfig -- shared by Row, Column, and Box.
  * The direction field determines layout axis:
- *   CLAY_LEFT_TO_RIGHT for Row, CLAY_TOP_TO_BOTTOM for Column/Box. */
+ *   CLAY_LEFT_TO_RIGHT for Row, CLAY_TOP_TO_BOTTOM for Column/Box.
+ *
+ * Internal component — stores pre-converted Clay_* types after boundary
+ * conversion in *_impl. Callers use ClayRow_props / ClayColumn_props /
+ * ClayBox_props (which take nucleus_*_t wrapper types). */
 typedef struct ClayContainerConfig {
     Clay_LayoutDirection direction;
     uint16_t gap;
@@ -156,11 +233,11 @@ typedef struct ClayRow_props {
     cels_lifecycle_def_t* lifecycle;
     const char* id;
     uint16_t gap;
-    Clay_Padding padding;
-    Clay_SizingAxis width;
-    Clay_SizingAxis height;
+    nucleus_padding_t padding;       /* was Clay_Padding — converted at cel_has boundary */
+    nucleus_size_t width;            /* was Clay_SizingAxis — converted via to_clay_sizing */
+    nucleus_size_t height;           /* was Clay_SizingAxis — converted via to_clay_sizing */
     Clay_ChildAlignment alignment;
-    Clay_Color bg;
+    nucleus_color_t bg;              /* was Clay_Color — converted via to_clay_color */
     bool clip;
 } ClayRow_props;
 
@@ -174,11 +251,11 @@ static void ClayRow_impl(ClayRow_props props) {
     cel_has(ClayContainerConfig,
         .direction = CLAY_LEFT_TO_RIGHT,
         .gap = props.gap,
-        .padding = props.padding,
-        .width = props.width,
-        .height = props.height,
+        .padding = to_clay_padding(props.padding),
+        .width   = to_clay_sizing(props.width),
+        .height  = to_clay_sizing(props.height),
         .alignment = props.alignment,
-        .bg = props.bg,
+        .bg = to_clay_color(props.bg),
         .clip = props.clip
     );
 }
@@ -193,11 +270,11 @@ typedef struct ClayColumn_props {
     cels_lifecycle_def_t* lifecycle;
     const char* id;
     uint16_t gap;
-    Clay_Padding padding;
-    Clay_SizingAxis width;
-    Clay_SizingAxis height;
+    nucleus_padding_t padding;       /* was Clay_Padding — converted at cel_has boundary */
+    nucleus_size_t width;            /* was Clay_SizingAxis — converted via to_clay_sizing */
+    nucleus_size_t height;           /* was Clay_SizingAxis — converted via to_clay_sizing */
     Clay_ChildAlignment alignment;
-    Clay_Color bg;
+    nucleus_color_t bg;              /* was Clay_Color — converted via to_clay_color */
     bool clip;
 } ClayColumn_props;
 
@@ -211,11 +288,11 @@ static void ClayColumn_impl(ClayColumn_props props) {
     cel_has(ClayContainerConfig,
         .direction = CLAY_TOP_TO_BOTTOM,
         .gap = props.gap,
-        .padding = props.padding,
-        .width = props.width,
-        .height = props.height,
+        .padding = to_clay_padding(props.padding),
+        .width   = to_clay_sizing(props.width),
+        .height  = to_clay_sizing(props.height),
         .alignment = props.alignment,
-        .bg = props.bg,
+        .bg = to_clay_color(props.bg),
         .clip = props.clip
     );
 }
@@ -232,11 +309,11 @@ static void ClayColumn_impl(ClayColumn_props props) {
 typedef struct ClayBox_props {
     cels_lifecycle_def_t* lifecycle;
     const char* id;
-    Clay_Padding padding;
-    Clay_SizingAxis width;
-    Clay_SizingAxis height;
+    nucleus_padding_t padding;       /* was Clay_Padding — converted at cel_has boundary */
+    nucleus_size_t width;            /* was Clay_SizingAxis — converted via to_clay_sizing */
+    nucleus_size_t height;           /* was Clay_SizingAxis — converted via to_clay_sizing */
     Clay_ChildAlignment alignment;
-    Clay_Color bg;
+    nucleus_color_t bg;              /* was Clay_Color — converted via to_clay_color */
     Clay_BorderElementConfig border;
     Clay_CornerRadius corner_radius;
     bool clip;
@@ -251,11 +328,11 @@ static void ClayBox_factory(void* _raw_props) {
 static void ClayBox_impl(ClayBox_props props) {
     cel_has(ClayContainerConfig,
         .direction = CLAY_TOP_TO_BOTTOM,
-        .padding = props.padding,
-        .width = props.width,
-        .height = props.height,
+        .padding = to_clay_padding(props.padding),
+        .width   = to_clay_sizing(props.width),
+        .height  = to_clay_sizing(props.height),
         .alignment = props.alignment,
-        .bg = props.bg,
+        .bg = to_clay_color(props.bg),
         .clip = props.clip
     );
     /* Attach border style only if any border width is non-zero */
@@ -280,7 +357,7 @@ typedef struct ClayText_props {
     cels_lifecycle_def_t* lifecycle;
     const char* id;
     const char* text;
-    Clay_Color color;
+    nucleus_color_t color;           /* was Clay_Color — converted at cel_has boundary */
     uint16_t font_size;
     uint16_t font_id;
     uint16_t letter_spacing;
@@ -295,10 +372,12 @@ static void ClayText_factory(void* _raw_props) {
     ClayText_impl(_p);
 }
 static void ClayText_impl(ClayText_props props) {
+    /* Default color: white (255,255,255,255) when no color specified. */
+    nucleus_color_t c = (props.color.r || props.color.g || props.color.b || props.color.a)
+        ? props.color : (nucleus_color_t){255, 255, 255, 255};
     cel_has(ClayTextConfig,
         .text = props.text,
-        .color = (props.color.r || props.color.g || props.color.b || props.color.a)
-            ? props.color : (Clay_Color){255, 255, 255, 255},
+        .color = to_clay_color(c),
         .font_size = props.font_size ? props.font_size : 16,
         .font_id = props.font_id,
         .letter_spacing = props.letter_spacing,
@@ -319,8 +398,8 @@ static void ClayText_impl(ClayText_props props) {
 typedef struct ClaySpacer_props {
     cels_lifecycle_def_t* lifecycle;
     const char* id;
-    Clay_SizingAxis width;
-    Clay_SizingAxis height;
+    nucleus_size_t width;            /* was Clay_SizingAxis — converted via to_clay_sizing */
+    nucleus_size_t height;           /* was Clay_SizingAxis — converted via to_clay_sizing */
 } ClaySpacer_props;
 
 static void ClaySpacer_impl(ClaySpacer_props props);
@@ -331,8 +410,8 @@ static void ClaySpacer_factory(void* _raw_props) {
 }
 static void ClaySpacer_impl(ClaySpacer_props props) {
     cel_has(ClaySpacerConfig,
-        .width = props.width,
-        .height = props.height
+        .width  = to_clay_sizing(props.width),
+        .height = to_clay_sizing(props.height)
     );
 }
 
