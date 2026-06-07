@@ -67,7 +67,7 @@ CEL_Compose(NCursesApp) {
  * ============================================================================ */
 
 cels_main() {
-    cels_register(NCurses, Clay_Engine, Clay_NCurses);
+    cels_register(NCurses_Engine, Clay_Engine, Clay_NCurses);
     cels_register(QuitInput);
 
     cels_session(NCursesApp) {

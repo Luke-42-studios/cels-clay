@@ -32,8 +32,8 @@
  * Anti-patterns avoided (per RESEARCH.md):
  *   - No separate WINDOW creation (uses background layer)
  *   - No wrefresh/wnoutrefresh/doupdate (frame pipeline handles compositing)
- *   - No manual color pair tracking (uses tui_color_rgb + tui_style_apply)
- *   - No re-implemented scissor (uses tui_push_scissor/tui_pop_scissor)
+ *   - No manual color pair tracking (uses ncurses_color_rgb + ncurses_style_apply)
+ *   - No re-implemented scissor (uses ncurses_push_scissor/ncurses_pop_scissor)
  *
  * NOTE: This file compiles in the CONSUMER's context (INTERFACE library).
  *       It is conditionally included when the cels-ncurses target exists.
@@ -68,7 +68,7 @@ typedef struct CEL_TextAttr {
  *
  * Decode CEL_TextAttr from a void* pointer (packed by w_pack_text_attr in
  * cels-widgets/style.h). Each bool occupies one bit of the pointer value.
- * Convert to TUI_ATTR_* bitmask for the ncurses style system.
+ * Convert to NCURSES_ATTR_* bitmask for the ncurses style system.
  */
 
 static inline CEL_TextAttr _unpack_text_attr(void* userData) {
@@ -82,13 +82,13 @@ static inline CEL_TextAttr _unpack_text_attr(void* userData) {
     };
 }
 
-static inline uint32_t _text_attr_to_tui(CEL_TextAttr a) {
-    uint32_t flags = TUI_ATTR_NORMAL;
-    if (a.bold)      flags |= TUI_ATTR_BOLD;
-    if (a.dim)       flags |= TUI_ATTR_DIM;
-    if (a.underline) flags |= TUI_ATTR_UNDERLINE;
-    if (a.reverse)   flags |= TUI_ATTR_REVERSE;
-    if (a.italic)    flags |= TUI_ATTR_ITALIC;
+static inline uint32_t _text_attr_to_ncurses(CEL_TextAttr a) {
+    uint32_t flags = NCURSES_ATTR_NORMAL;
+    if (a.bold)      flags |= NCURSES_ATTR_BOLD;
+    if (a.dim)       flags |= NCURSES_ATTR_DIM;
+    if (a.underline) flags |= NCURSES_ATTR_UNDERLINE;
+    if (a.reverse)   flags |= NCURSES_ATTR_REVERSE;
+    if (a.italic)    flags |= NCURSES_ATTR_ITALIC;
     return flags;
 }
 
@@ -116,7 +116,7 @@ static const ClayNcursesTheme* g_theme = NULL;
  *   (wcwidth units), which are already terminal-accurate.
  */
 
-static TUI_CellRect clay_bbox_to_cells(Clay_BoundingBox bbox) {
+static NCurses_CellRect clay_bbox_to_cells(Clay_BoundingBox bbox) {
     float ar = g_theme->cell_aspect_ratio;
 
     /* Scale horizontal values by aspect ratio */
@@ -133,10 +133,10 @@ static TUI_CellRect clay_bbox_to_cells(Clay_BoundingBox bbox) {
     if (bbox.width > 0 && cw < 1) cw = 1;
     if (bbox.height > 0 && ch < 1) ch = 1;
 
-    return (TUI_CellRect){ .x = cx, .y = cy, .w = cw, .h = ch };
+    return (NCurses_CellRect){ .x = cx, .y = cy, .w = cw, .h = ch };
 }
 
-static TUI_CellRect clay_text_bbox_to_cells(Clay_BoundingBox bbox) {
+static NCurses_CellRect clay_text_bbox_to_cells(Clay_BoundingBox bbox) {
     /* No aspect ratio scaling -- text widths are already in cell columns */
     int cx = (int)roundf(bbox.x * g_theme->cell_aspect_ratio);
     int cy = (int)roundf(bbox.y);
@@ -147,10 +147,10 @@ static TUI_CellRect clay_text_bbox_to_cells(Clay_BoundingBox bbox) {
     if (bbox.width > 0 && cw < 1) cw = 1;
     if (bbox.height > 0 && ch < 1) ch = 1;
 
-    return (TUI_CellRect){ .x = cx, .y = cy, .w = cw, .h = ch };
+    return (NCurses_CellRect){ .x = cx, .y = cy, .w = cw, .h = ch };
 }
 
-/* (Overlay layer removed -- the old TUI_Layer API no longer exists.
+/* (Overlay layer removed -- the old NCurses_Layer API no longer exists.
  * Clay sorts commands by zIndex so overlay content draws naturally
  * after background content.) */
 
@@ -162,21 +162,21 @@ static TUI_CellRect clay_text_bbox_to_cells(Clay_BoundingBox bbox) {
  * Alpha < 128 maps to A_DIM when theme->alpha_as_dim is true.
  */
 
-static void render_rectangle(TUI_DrawContext* ctx, TUI_CellRect rect,
+static void render_rectangle(NCurses_DrawContext* ctx, NCurses_CellRect rect,
                               Clay_RectangleRenderData* data) {
     Clay_Color c = data->backgroundColor;
 
-    TUI_Style style = {
-        .fg = TUI_COLOR_DEFAULT,
-        .bg = tui_color_rgb((uint8_t)c.r, (uint8_t)c.g, (uint8_t)c.b),
-        .attrs = TUI_ATTR_NORMAL,
+    NCurses_Style style = {
+        .fg = NCURSES_COLOR_DEFAULT,
+        .bg = ncurses_color_rgb((uint8_t)c.r, (uint8_t)c.g, (uint8_t)c.b),
+        .attrs = NCURSES_ATTR_NORMAL,
     };
 
     if (g_theme->alpha_as_dim && c.a < 128) {
-        style.attrs |= TUI_ATTR_DIM;
+        style.attrs |= NCURSES_ATTR_DIM;
     }
 
-    tui_draw_fill_rect(ctx, rect, ' ', style);
+    ncurses_draw_fill_rect(ctx, rect, ' ', style);
 }
 
 /* ============================================================================
@@ -185,7 +185,7 @@ static void render_rectangle(TUI_DrawContext* ctx, TUI_CellRect rect,
  *
  * Renders Clay_StringSlice text. The slice is NOT null-terminated, so we
  * copy to a stack buffer (with malloc fallback for long strings) before
- * passing to tui_draw_text which expects const char*.
+ * passing to ncurses_draw_text which expects const char*.
  */
 
 /* Find the background color of the nearest parent RECTANGLE that contains
@@ -214,7 +214,7 @@ static Clay_Color find_parent_bg(Clay_RenderCommandArray cmds, int32_t text_idx)
     return (Clay_Color){0, 0, 0, 0};  /* alpha=0: no parent bg found */
 }
 
-static void render_text(TUI_DrawContext* ctx, TUI_CellRect rect,
+static void render_text(NCurses_DrawContext* ctx, NCurses_CellRect rect,
                          Clay_TextRenderData* data,
                          Clay_Color parent_bg,
                          void* userData) {
@@ -232,25 +232,25 @@ static void render_text(TUI_DrawContext* ctx, TUI_CellRect rect,
     buf[text.length] = '\0';
 
     Clay_Color c = data->textColor;
-    TUI_Color bg = (parent_bg.a > 0)
-        ? tui_color_rgb((uint8_t)parent_bg.r, (uint8_t)parent_bg.g,
-                        (uint8_t)parent_bg.b)
-        : TUI_COLOR_DEFAULT;
+    NCurses_Color bg = (parent_bg.a > 0)
+        ? ncurses_color_rgb((uint8_t)parent_bg.r, (uint8_t)parent_bg.g,
+                            (uint8_t)parent_bg.b)
+        : NCURSES_COLOR_DEFAULT;
 
     /* Decode text attributes from userData (packed by w_pack_text_attr) */
-    uint32_t attrs = TUI_ATTR_NORMAL;
+    uint32_t attrs = NCURSES_ATTR_NORMAL;
     if (userData) {
         CEL_TextAttr ta = _unpack_text_attr(userData);
-        attrs = _text_attr_to_tui(ta);
+        attrs = _text_attr_to_ncurses(ta);
     }
 
-    TUI_Style style = {
-        .fg = tui_color_rgb((uint8_t)c.r, (uint8_t)c.g, (uint8_t)c.b),
+    NCurses_Style style = {
+        .fg = ncurses_color_rgb((uint8_t)c.r, (uint8_t)c.g, (uint8_t)c.b),
         .bg = bg,
         .attrs = attrs,
     };
 
-    tui_draw_text(ctx, rect.x, rect.y, buf, style);
+    ncurses_draw_text(ctx, rect.x, rect.y, buf, style);
 
     if (buf != buf_stack) free(buf);
 }
@@ -260,124 +260,124 @@ static void render_text(TUI_DrawContext* ctx, TUI_CellRect rect,
  * ============================================================================
  *
  * Builds a per-side bitmask from Clay_BorderRenderData.width and draws
- * using tui_draw_border with TUI_BORDER_SINGLE style. The default theme
- * uses single-line Unicode characters which match TUI_BORDER_SINGLE exactly.
+ * using ncurses_draw_border with NCURSES_BORDER_SINGLE style. The default theme
+ * uses single-line Unicode characters which match NCURSES_BORDER_SINGLE exactly.
  *
  * Theme overrides Clay's border color (CONTEXT.md decision). For v1, border
- * color uses TUI_COLOR_DEFAULT (terminal foreground). Custom theme chars
+ * color uses NCURSES_COLOR_DEFAULT (terminal foreground). Custom theme chars
  * beyond single/double/rounded would need a custom draw path in v2.
  */
 
-static void render_border(TUI_DrawContext* ctx, TUI_CellRect rect,
+static void render_border(NCurses_DrawContext* ctx, NCurses_CellRect rect,
                            Clay_BorderRenderData* data,
                            Clay_Color parent_bg) {
     /* Build per-side mask from Clay border widths */
     uint8_t sides = 0;
-    if (data->width.top > 0)    sides |= TUI_SIDE_TOP;
-    if (data->width.right > 0)  sides |= TUI_SIDE_RIGHT;
-    if (data->width.bottom > 0) sides |= TUI_SIDE_BOTTOM;
-    if (data->width.left > 0)   sides |= TUI_SIDE_LEFT;
+    if (data->width.top > 0)    sides |= NCURSES_SIDE_TOP;
+    if (data->width.right > 0)  sides |= NCURSES_SIDE_RIGHT;
+    if (data->width.bottom > 0) sides |= NCURSES_SIDE_BOTTOM;
+    if (data->width.left > 0)   sides |= NCURSES_SIDE_LEFT;
 
     if (sides == 0) return;
 
     /* Use Clay border color when provided, else terminal default */
     Clay_Color c = data->color;
-    TUI_Color fg = (c.r || c.g || c.b || c.a)
-        ? tui_color_rgb((uint8_t)c.r, (uint8_t)c.g, (uint8_t)c.b)
-        : TUI_COLOR_DEFAULT;
+    NCurses_Color fg = (c.r || c.g || c.b || c.a)
+        ? ncurses_color_rgb((uint8_t)c.r, (uint8_t)c.g, (uint8_t)c.b)
+        : NCURSES_COLOR_DEFAULT;
 
     /* Use parent rectangle's bg so border chars blend with the fill */
-    TUI_Color bg = (parent_bg.a > 0)
-        ? tui_color_rgb((uint8_t)parent_bg.r, (uint8_t)parent_bg.g,
-                        (uint8_t)parent_bg.b)
-        : TUI_COLOR_DEFAULT;
+    NCurses_Color bg = (parent_bg.a > 0)
+        ? ncurses_color_rgb((uint8_t)parent_bg.r, (uint8_t)parent_bg.g,
+                            (uint8_t)parent_bg.b)
+        : NCURSES_COLOR_DEFAULT;
 
-    TUI_Style style = {
+    NCurses_Style style = {
         .fg = fg,
         .bg = bg,
-        .attrs = TUI_ATTR_NORMAL,
+        .attrs = NCURSES_ATTR_NORMAL,
     };
 
-    /* Map Clay properties to TUI border style:
+    /* Map Clay properties to NCurses border style:
      * - cornerRadius > 0 → rounded
      * - any borderWidth >= 2 → double
      * - else → single (default) */
-    TUI_BorderStyle border_style = TUI_BORDER_SINGLE;
+    NCurses_BorderStyle border_style = NCURSES_BORDER_SINGLE;
     if (data->cornerRadius.topLeft > 0 || data->cornerRadius.topRight > 0 ||
         data->cornerRadius.bottomLeft > 0 || data->cornerRadius.bottomRight > 0) {
-        border_style = TUI_BORDER_ROUNDED;
+        border_style = NCURSES_BORDER_ROUNDED;
     } else if (data->width.top >= 2 || data->width.right >= 2 ||
                data->width.bottom >= 2 || data->width.left >= 2) {
-        border_style = TUI_BORDER_DOUBLE;
+        border_style = NCURSES_BORDER_DOUBLE;
     }
 
-    tui_draw_border(ctx, rect, sides, border_style, style);
+    ncurses_draw_border(ctx, rect, sides, border_style, style);
 }
 
 /* ============================================================================
  * Border Decoration Rendering (CelClayBorderDecor)
  * ============================================================================
  *
- * Draws a TUI border at the RECTANGLE edges when a CelClayBorderDecor is
+ * Draws a NCurses border at the RECTANGLE edges when a CelClayBorderDecor is
  * attached via userData. Bypasses Clay's border system (which AR-scales
  * uint16_t widths to 2+ cells) — draws 1-cell-wide box-drawing characters.
  * Optional title-in-border overlays text on the top border line.
  */
 
-static void render_border_decor(TUI_DrawContext* ctx, TUI_CellRect rect,
+static void render_border_decor(NCurses_DrawContext* ctx, NCurses_CellRect rect,
                                  CelClayBorderDecor* decor,
                                  Clay_Color parent_bg) {
-    /* Map border style enum to TUI border style */
-    TUI_BorderStyle bs;
+    /* Map border style enum to NCurses border style */
+    NCurses_BorderStyle bs;
     switch (decor->border_style) {
-        case 1:  bs = TUI_BORDER_SINGLE; break;
-        case 2:  bs = TUI_BORDER_DOUBLE; break;
-        default: bs = TUI_BORDER_ROUNDED; break;
+        case 1:  bs = NCURSES_BORDER_SINGLE; break;
+        case 2:  bs = NCURSES_BORDER_DOUBLE; break;
+        default: bs = NCURSES_BORDER_ROUNDED; break;
     }
 
     /* Fill ONLY the interior (inside the border) with panel bg.
      * Skip fill when bg alpha < 2 (alpha 0-1 = transparent / border-only). */
     Clay_Color ibg = decor->bg_color;
-    TUI_CellRect inner = {
+    NCurses_CellRect inner = {
         .x = rect.x + 1, .y = rect.y + 1,
         .w = rect.w - 2, .h = rect.h - 2
     };
     if (inner.w > 0 && inner.h > 0 && ibg.a >= 2.0f) {
-        TUI_Style fill_style = {
-            .fg = TUI_COLOR_DEFAULT,
-            .bg = tui_color_rgb((uint8_t)ibg.r, (uint8_t)ibg.g, (uint8_t)ibg.b),
-            .attrs = TUI_ATTR_NORMAL,
+        NCurses_Style fill_style = {
+            .fg = NCURSES_COLOR_DEFAULT,
+            .bg = ncurses_color_rgb((uint8_t)ibg.r, (uint8_t)ibg.g, (uint8_t)ibg.b),
+            .attrs = NCURSES_ATTR_NORMAL,
         };
-        tui_draw_fill_rect(ctx, inner, ' ', fill_style);
+        ncurses_draw_fill_rect(ctx, inner, ' ', fill_style);
     }
 
     /* Border style: border fg on parent/terminal bg (no panel bg bleed) */
     Clay_Color c = decor->border_color;
-    TUI_Color border_bg = (parent_bg.a > 0)
-        ? tui_color_rgb((uint8_t)parent_bg.r, (uint8_t)parent_bg.g,
-                        (uint8_t)parent_bg.b)
-        : TUI_COLOR_DEFAULT;
-    TUI_Style style = {
-        .fg = tui_color_rgb((uint8_t)c.r, (uint8_t)c.g, (uint8_t)c.b),
+    NCurses_Color border_bg = (parent_bg.a > 0)
+        ? ncurses_color_rgb((uint8_t)parent_bg.r, (uint8_t)parent_bg.g,
+                            (uint8_t)parent_bg.b)
+        : NCURSES_COLOR_DEFAULT;
+    NCurses_Style style = {
+        .fg = ncurses_color_rgb((uint8_t)c.r, (uint8_t)c.g, (uint8_t)c.b),
         .bg = border_bg,
-        .attrs = TUI_ATTR_NORMAL,
+        .attrs = NCURSES_ATTR_NORMAL,
     };
 
     /* Draw border at rectangle edges */
-    tui_draw_border(ctx, rect, TUI_SIDE_ALL, bs, style);
+    ncurses_draw_border(ctx, rect, NCURSES_SIDE_ALL, bs, style);
 
     /* Draw title on top border line: " Title " overlaying the hline */
     int title_end = rect.x + 1; /* track where title ends for right_text */
     if (decor->title && decor->title[0] != '\0') {
         Clay_Color tc = decor->title_color;
-        uint32_t attrs = TUI_ATTR_NORMAL;
+        uint32_t attrs = NCURSES_ATTR_NORMAL;
         if (decor->title_text_attr) {
             CEL_TextAttr ta = _unpack_text_attr((void*)decor->title_text_attr);
-            attrs = _text_attr_to_tui(ta);
+            attrs = _text_attr_to_ncurses(ta);
         }
 
-        TUI_Style title_style = {
-            .fg = tui_color_rgb((uint8_t)tc.r, (uint8_t)tc.g, (uint8_t)tc.b),
+        NCurses_Style title_style = {
+            .fg = ncurses_color_rgb((uint8_t)tc.r, (uint8_t)tc.g, (uint8_t)tc.b),
             .bg = border_bg,
             .attrs = attrs,
         };
@@ -391,8 +391,8 @@ static void render_border_decor(TUI_DrawContext* ctx, TUI_CellRect rect,
         int title_x = rect.x + 1;
         int max_cols = rect.w - 2; /* Leave 1 cell for each corner */
         if (max_cols > 0) {
-            tui_draw_text_bounded(ctx, title_x, rect.y, title_buf,
-                                   max_cols, title_style);
+            ncurses_draw_text_bounded(ctx, title_x, rect.y, title_buf,
+                                      max_cols, title_style);
             int tlen = (int)strlen(title_buf);
             title_end = title_x + (tlen < max_cols ? tlen : max_cols);
         }
@@ -401,10 +401,10 @@ static void render_border_decor(TUI_DrawContext* ctx, TUI_CellRect rect,
     /* Draw right-aligned text on top border line (e.g., "[X]" for windows) */
     if (decor->right_text && decor->right_text[0] != '\0') {
         Clay_Color rc = decor->right_color;
-        TUI_Style right_style = {
-            .fg = tui_color_rgb((uint8_t)rc.r, (uint8_t)rc.g, (uint8_t)rc.b),
+        NCurses_Style right_style = {
+            .fg = ncurses_color_rgb((uint8_t)rc.r, (uint8_t)rc.g, (uint8_t)rc.b),
             .bg = border_bg,
-            .attrs = TUI_ATTR_NORMAL,
+            .attrs = NCURSES_ATTR_NORMAL,
         };
 
         char right_buf[64];
@@ -415,8 +415,8 @@ static void render_border_decor(TUI_DrawContext* ctx, TUI_CellRect rect,
         int right_x = right_end - (int)strlen(right_buf);
         if (right_x > title_end && right_x >= rect.x + 1) {
             int max_cols = right_end - right_x;
-            tui_draw_text_bounded(ctx, right_x, rect.y, right_buf,
-                                   max_cols, right_style);
+            ncurses_draw_text_bounded(ctx, right_x, rect.y, right_buf,
+                                      max_cols, right_style);
         }
     }
 }
@@ -443,28 +443,28 @@ static void clay_ncurses_render(cels_iter_t* it) {
     if (cmds_check.length <= 0) return;
 
     {
-        /* Clear screen before drawing — no TUISurface means no automatic
+        /* Clear screen before drawing — no NCursesSurface means no automatic
          * clear/refresh cycle. We own the full stdscr lifecycle here. */
         werase(stdscr);
 
         /* Create draw context from stdscr (full terminal surface). */
-        TUI_DrawContext bg_ctx = tui_draw_context_create(
+        NCurses_DrawContext bg_ctx = ncurses_draw_context_create(
             stdscr, 0, 0, COLS, LINES);
 
         /* Reset scissor stack */
-        tui_scissor_reset(&bg_ctx);
+        ncurses_scissor_reset(&bg_ctx);
 
         Clay_RenderCommandArray cmds = cmds_check;
 
         /* Render pass: all commands draw to background surface */
-        TUI_DrawContext* ctx = &bg_ctx;
+        NCurses_DrawContext* ctx = &bg_ctx;
 
         for (int32_t j = 0; j < cmds.length; j++) {
             Clay_RenderCommand* cmd = Clay_RenderCommandArray_Get(&cmds, j);
 
             switch (cmd->commandType) {
                 case CLAY_RENDER_COMMAND_TYPE_RECTANGLE: {
-                    TUI_CellRect cell_rect = clay_bbox_to_cells(cmd->boundingBox);
+                    NCurses_CellRect cell_rect = clay_bbox_to_cells(cmd->boundingBox);
                     if (cmd->userData) {
                         /* Border decoration: skip normal full-area fill.
                          * render_border_decor fills only the interior (inside
@@ -480,26 +480,26 @@ static void clay_ncurses_render(cels_iter_t* it) {
                 }
                 case CLAY_RENDER_COMMAND_TYPE_TEXT: {
                     /* Text bounding boxes are NOT aspect-ratio-scaled */
-                    TUI_CellRect cell_rect = clay_text_bbox_to_cells(cmd->boundingBox);
+                    NCurses_CellRect cell_rect = clay_text_bbox_to_cells(cmd->boundingBox);
                     Clay_Color parent_bg = find_parent_bg(cmds, j);
                     render_text(ctx, cell_rect, &cmd->renderData.text,
                                 parent_bg, cmd->userData);
                     break;
                 }
                 case CLAY_RENDER_COMMAND_TYPE_BORDER: {
-                    TUI_CellRect cell_rect = clay_bbox_to_cells(cmd->boundingBox);
+                    NCurses_CellRect cell_rect = clay_bbox_to_cells(cmd->boundingBox);
                     Clay_Color border_parent_bg = find_parent_bg(cmds, j);
                     render_border(ctx, cell_rect, &cmd->renderData.border,
                                   border_parent_bg);
                     break;
                 }
                 case CLAY_RENDER_COMMAND_TYPE_SCISSOR_START: {
-                    TUI_CellRect cell_rect = clay_bbox_to_cells(cmd->boundingBox);
-                    tui_push_scissor(ctx, cell_rect);
+                    NCurses_CellRect cell_rect = clay_bbox_to_cells(cmd->boundingBox);
+                    ncurses_push_scissor(ctx, cell_rect);
                     break;
                 }
                 case CLAY_RENDER_COMMAND_TYPE_SCISSOR_END: {
-                    tui_pop_scissor(ctx);
+                    ncurses_pop_scissor(ctx);
                     break;
                 }
                 default:
@@ -619,7 +619,7 @@ CEL_Module(Clay_NCurses, init) {
     /* Register render system at OnRender phase */
     ClayRenderableData_register();
     cels_entity_t comp_ids[] = { ClayRenderableData_id };
-    cels_system_declare("TUI_ClayRenderable_ClayRenderableData",
+    cels_system_declare("NCurses_ClayRenderable_ClayRenderableData",
                         OnRender, clay_ncurses_render, comp_ids, 1);
 }
 
