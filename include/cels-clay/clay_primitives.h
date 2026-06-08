@@ -43,6 +43,16 @@
  *   - ClaySpacer: spacing element
  *   - ClayImage: image element
  *
+ * Color resolution (IMPORTANT, see WR-03): theme-aware background resolution
+ * via the CELS_DEFAULT_COLOR sentinel + active-theme slot chain is applied ONLY
+ * by the text-bearing primitives -- ClayText (and ClayButton in cels-clay-widgets).
+ * The container primitives (ClayRow, ClayColumn, ClayBox) and ClayImage pass
+ * their `.bg` straight through to_clay_color() with NO sentinel/theme resolution:
+ * omitting `.bg` yields the zero color {0,0,0,0} (transparent), NOT the active
+ * theme surface. This is intentional -- containers are transparent by default so
+ * they inherit the parent/canvas background. Pass an explicit `.bg` (or route it
+ * through cels_resolve_color at the call site) if a theme-aware surface is wanted.
+ *
  * All compositions use static linkage to avoid multiple-definition errors
  * when included by multiple TUs in the INTERFACE library pattern.
  *
@@ -274,6 +284,8 @@ static void ClayRow_factory(void* _raw_props) {
     ClayRow_impl(_p);
 }
 static void ClayRow_impl(ClayRow_props props) {
+    /* WR-03: bg is NOT sentinel/theme resolved -- omitting .bg gives transparent
+     * {0,0,0,0} by design (containers inherit parent bg). Pass explicit .bg. */
     cel_has(ClayContainerConfig,
         .direction = CLAY_LEFT_TO_RIGHT,
         .gap = props.gap,
@@ -311,6 +323,8 @@ static void ClayColumn_factory(void* _raw_props) {
     ClayColumn_impl(_p);
 }
 static void ClayColumn_impl(ClayColumn_props props) {
+    /* WR-03: bg is NOT sentinel/theme resolved -- omitting .bg gives transparent
+     * {0,0,0,0} by design (containers inherit parent bg). Pass explicit .bg. */
     cel_has(ClayContainerConfig,
         .direction = CLAY_TOP_TO_BOTTOM,
         .gap = props.gap,
@@ -352,6 +366,9 @@ static void ClayBox_factory(void* _raw_props) {
     ClayBox_impl(_p);
 }
 static void ClayBox_impl(ClayBox_props props) {
+    /* WR-03: container bg is NOT sentinel/theme resolved -- omitting .bg gives
+     * transparent {0,0,0,0} by design (containers inherit parent bg). Only
+     * ClayText / ClayButton are theme-resolving. Pass explicit .bg for a fill. */
     cel_has(ClayContainerConfig,
         .direction = CLAY_TOP_TO_BOTTOM,
         .padding = to_clay_padding(props.padding),
@@ -479,6 +496,8 @@ static void ClayImage_factory(void* _raw_props) {
     ClayImage_impl(_p);
 }
 static void ClayImage_impl(ClayImage_props props) {
+    /* WR-03: bg is NOT sentinel/theme resolved -- omitting .bg gives transparent
+     * {0,0,0,0} by design. Only ClayText / ClayButton are theme-resolving. */
     cel_has(ClayImageConfig,
         .source = props.source,
         .source_width = props.source_width,
