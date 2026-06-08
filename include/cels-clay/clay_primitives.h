@@ -61,17 +61,12 @@
 
 /* ============================================================================
  * Wrapper types — nucleus_*_t convenience aliases.
- * nucleus_color_t is a typedef alias for cels_color_t (ABI-identical to Clay_Color).
+ * cels_color_t is the canonical color type (owned by cels-theme, ABI-identical
+ * to Clay_Color).  nucleus_color_t is a typedef alias in nucleus_types.h for
+ * source compatibility; clay_primitives.h uses cels_color_t directly.
  * nucleus_padding_t and nucleus_size_t are standalone structs defined here so
  * clay_primitives.h does not depend on engines/Nucleus/include.
  * ============================================================================ */
-
-/* Color: alias cels_color_t (owned by cels-theme, ABI-identical to Clay_Color).
- * Guard prevents redefinition when nucleus_types.h is also included (Nucleus builds). */
-#ifndef NUCLEUS_COLOR_T_DEFINED
-#define NUCLEUS_COLOR_T_DEFINED
-typedef cels_color_t nucleus_color_t;
-#endif
 
 /* Padding: ABI-identical to Clay_Padding { uint16_t left, right, top, bottom; }. */
 #ifndef NUCLEUS_PADDING_T_DEFINED
@@ -107,9 +102,9 @@ _Static_assert(sizeof(nucleus_padding_t) == sizeof(Clay_Padding),
  * library pattern) — multiple-definition errors if not static.
  * ============================================================================ */
 
-/* to_clay_color: reinterpret nucleus_color_t as Clay_Color via memcpy.
+/* to_clay_color: reinterpret cels_color_t as Clay_Color via memcpy.
  * ABI-identical — verified by _Static_assert above. */
-static inline Clay_Color to_clay_color(nucleus_color_t c) {
+static inline Clay_Color to_clay_color(cels_color_t c) {
     Clay_Color r;
     __builtin_memcpy(&r, &c, sizeof(r));
     return r;
@@ -268,7 +263,7 @@ typedef struct ClayRow_props {
     nucleus_size_t width;            /* was Clay_SizingAxis — converted via to_clay_sizing */
     nucleus_size_t height;           /* was Clay_SizingAxis — converted via to_clay_sizing */
     Clay_ChildAlignment alignment;
-    nucleus_color_t bg;              /* was Clay_Color — converted via to_clay_color */
+    cels_color_t bg;                 /* was Clay_Color — converted via to_clay_color */
     bool clip;
 } ClayRow_props;
 
@@ -305,7 +300,7 @@ typedef struct ClayColumn_props {
     nucleus_size_t width;            /* was Clay_SizingAxis — converted via to_clay_sizing */
     nucleus_size_t height;           /* was Clay_SizingAxis — converted via to_clay_sizing */
     Clay_ChildAlignment alignment;
-    nucleus_color_t bg;              /* was Clay_Color — converted via to_clay_color */
+    cels_color_t bg;                 /* was Clay_Color — converted via to_clay_color */
     bool clip;
 } ClayColumn_props;
 
@@ -344,7 +339,7 @@ typedef struct ClayBox_props {
     nucleus_size_t width;            /* was Clay_SizingAxis — converted via to_clay_sizing */
     nucleus_size_t height;           /* was Clay_SizingAxis — converted via to_clay_sizing */
     Clay_ChildAlignment alignment;
-    nucleus_color_t bg;              /* was Clay_Color — converted via to_clay_color */
+    cels_color_t bg;                 /* was Clay_Color — converted via to_clay_color */
     Clay_BorderElementConfig border;
     Clay_CornerRadius corner_radius;
     bool clip;
@@ -381,14 +376,16 @@ static void ClayBox_impl(ClayBox_props props) {
 /* --------------------------------------------------------------------------
  * ClayText -- text element
  * --------------------------------------------------------------------------
- * Defaults: color white (255,255,255,255), font_size 16 if not specified.
+ * Color resolution: explicit prop > active theme text slot > white fallback.
+ * Pass CELS_DEFAULT_COLOR (or omit the field) to use the active theme color.
+ * font_size defaults to 16 if not specified.
  */
 
 typedef struct ClayText_props {
     cels_lifecycle_def_t* lifecycle;
     const char* id;
     const char* text;
-    nucleus_color_t color;           /* was Clay_Color — converted at cel_has boundary */
+    cels_color_t color;              /* was Clay_Color — sentinel+theme resolved in impl */
     uint16_t font_size;
     uint16_t font_id;
     uint16_t letter_spacing;
@@ -403,9 +400,20 @@ static void ClayText_factory(void* _raw_props) {
     ClayText_impl(_p);
 }
 static void ClayText_impl(ClayText_props props) {
-    /* Default color: white (255,255,255,255) when no color specified. */
-    nucleus_color_t c = (props.color.r || props.color.g || props.color.b || props.color.a)
-        ? props.color : (nucleus_color_t){255, 255, 255, 255};
+    /* Resolve text color via 2-level sentinel chain (WR-01 fix):
+     *   1. props.color            — explicit per-text color (if not sentinel)
+     *   2. theme->text            — active theme text slot  (if not sentinel)
+     *   3. FB_TEXT                — compiled-in white fallback (last resort)
+     *
+     * CELS_DEFAULT_COLOR (c.r < 0) is the sentinel: {0,0,0,0} transparent and
+     * {0,0,0,255} pure black are now honored as explicit colors (WR-01 resolved).
+     */
+    const struct CelsTheme_Active* ta = cel_watch(CelsTheme_Active);
+    const CelsTheme* theme = ta ? &ta->active : NULL;
+    static const cels_color_t FB_TEXT = {255.0f, 255.0f, 255.0f, 255.0f};
+
+    cels_color_t c = cels_resolve_color(props.color,
+                     cels_resolve_color(theme ? theme->text : CELS_DEFAULT_COLOR, FB_TEXT));
     cel_has(ClayTextConfig,
         .text = props.text,
         .color = to_clay_color(c),
