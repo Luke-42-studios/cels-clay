@@ -204,7 +204,20 @@ static void render_rectangle(NCurses_DrawContext* ctx, NCurses_CellRect rect,
 /* Find the background color of the nearest parent RECTANGLE that contains
  * the given bounding box. Clay emits commands depth-first: a parent's
  * RECTANGLE always precedes its children's TEXT commands. Scanning backwards
- * from the TEXT index, the first containing RECTANGLE is the innermost parent. */
+ * from the TEXT index, the first containing RECTANGLE is the innermost parent.
+ *
+ * WR-08 -- INVARIANT this relies on (currently unguarded by an assertion):
+ *   1. Clay's depth-first command ordering: the parent RECTANGLE for a TEXT
+ *      command appears earlier in the array than the TEXT command itself.
+ *   2. The parent RECTANGLE is actually emitted (not culled). A fully scissored
+ *      or sub-alpha-2 parent is skipped here, so its TEXT child would fall back
+ *      to the terminal default bg and may show color bleed.
+ *
+ * The returned {0,0,0,0} (alpha 0) is the intentional "no opaque container
+ * found -> use terminal default background" signal; callers MUST treat alpha 0
+ * as transparent (see the (parent_bg.a > 0) guards at the call sites). It is
+ * NOT an error sentinel. If color bleed on culled parents becomes a problem,
+ * relax the containment test to "nearest preceding opaque RECTANGLE" here. */
 static Clay_Color find_parent_bg(Clay_RenderCommandArray cmds, int32_t text_idx) {
     Clay_BoundingBox tb = Clay_RenderCommandArray_Get(&cmds, text_idx)->boundingBox;
 
