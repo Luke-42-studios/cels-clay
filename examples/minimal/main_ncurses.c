@@ -13,7 +13,7 @@
 #include <cels/cels.h>
 #include <cels_ncurses.h>
 #include <cels-clay/clay_engine.h>
-#include <cels-clay/clay_ncurses_renderer.h>
+#include <cels-clay-ncurses/clay_ncurses_renderer.h>
 #include <cels-clay/clay_primitives.h>
 #include <cels-clay/clay_layout.h>
 #include "ui.h"

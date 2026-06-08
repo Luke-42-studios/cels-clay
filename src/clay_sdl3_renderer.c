@@ -37,7 +37,7 @@
  *       It is conditionally included when the cels-sdl3 target exists.
  */
 
-#include "cels-clay/clay_sdl3_renderer.h"
+#include "cels-clay-sdl3/clay_sdl3_renderer.h"
 #include "cels-clay/clay_render.h"
 #include "clay.h"
 #include <cels/cels.h>

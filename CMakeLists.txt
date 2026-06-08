@@ -13,9 +13,10 @@
 # limitations under the License.
 
 # cels-clay - Clay layout engine integration for CELS framework
-# INTERFACE library: sources compile in the consumer's context
+# Four INTERFACE targets: cels-clay-core, cels-clay-sdl3, cels-clay-ncurses, cels-clay-widgets
+# Plus aggregate cels-clay alias for back-compat.
 cmake_minimum_required(VERSION 3.21)
-project(cels-clay VERSION 0.6.0 LANGUAGES C)
+project(cels-clay VERSION 0.7.0 LANGUAGES C)
 
 # ============================================================================
 # Fetch Clay (single-header layout library)
@@ -60,86 +61,92 @@ if(NOT TARGET cels)
     add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../cels ${CMAKE_CURRENT_BINARY_DIR}/_deps/cels EXCLUDE_FROM_ALL)
 endif()
 
-if(NOT TARGET cels-ncurses)
-    if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/../cels-ncurses/CMakeLists.txt)
-        add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../cels-ncurses ${CMAKE_CURRENT_BINARY_DIR}/_deps/cels-ncurses EXCLUDE_FROM_ALL)
-    endif()
-endif()
-
-if(NOT TARGET cels-sdl3)
-    if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/../cels-sdl3/CMakeLists.txt)
-        add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../cels-sdl3 ${CMAKE_CURRENT_BINARY_DIR}/_deps/cels-sdl3 EXCLUDE_FROM_ALL)
+if(NOT TARGET cels-theme)
+    if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/../cels-theme/CMakeLists.txt)
+        add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../cels-theme
+                         ${CMAKE_CURRENT_BINARY_DIR}/_deps/cels-theme EXCLUDE_FROM_ALL)
     endif()
 endif()
 
 # ============================================================================
-# INTERFACE library target
+# cels-clay-core — layout engine, no renderer deps
 # ============================================================================
+# Links only cels + cels-theme. No SDL3, ttf, image, or ncurses.
+# cels-theme provides cels_color_t which resolves the former nucleus_types.h
+# coupling (that cross-repo include path is now deleted).
 
-add_library(cels-clay INTERFACE)
-add_library(cels::clay ALIAS cels-clay)
-
-target_sources(cels-clay INTERFACE
+add_library(cels-clay-core INTERFACE)
+target_sources(cels-clay-core INTERFACE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/clay_impl.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/clay_engine.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/clay_layout.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/clay_render.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/clay_primitives.c
 )
-
-target_include_directories(cels-clay INTERFACE
+target_include_directories(cels-clay-core INTERFACE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${clay_SOURCE_DIR}
-    # TEMPORARY: cels-clay headers include <nucleus/nucleus_types.h> for wrapper types.
-    # This coupling is resolved in Phase 3 (MOD-01) via a proper module split that
-    # moves nucleus_types.h to a standalone lib (e.g. nucleus-types) with no engine deps.
-    # Path is relative to cels-clay's own location so it is correct regardless of which
-    # project is the superbuild top-level (CMAKE_SOURCE_DIR is unreliable here: in the
-    # Nucleus superbuild it resolves to engines/Nucleus, not the workspace root). In the
-    # workspace layout, libs/cels-clay and engines/Nucleus are fixed siblings.
-    # Standalone cels-clay builds (without the workspace) will need to provide
-    # NUCLEUS_TYPES_INCLUDE_DIR or pull nucleus-types directly (Phase 3 concern).
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../engines/Nucleus/include
 )
+target_link_libraries(cels-clay-core INTERFACE cels cels-theme)
 
+# ============================================================================
+# cels-clay-sdl3 — SDL3 renderer
+# ============================================================================
+# Links cels-clay-core + cels-sdl3. Headers under include/cels-clay-sdl3/ so
+# they only resolve when this target is linked (per-target include path).
+
+add_library(cels-clay-sdl3 INTERFACE)
+target_sources(cels-clay-sdl3 INTERFACE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/clay_sdl3_renderer.c
+)
+target_include_directories(cels-clay-sdl3 INTERFACE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/cels-clay-sdl3
+)
+target_link_libraries(cels-clay-sdl3 INTERFACE cels-clay-core cels-sdl3)
+
+# ============================================================================
+# cels-clay-ncurses — ncurses renderer
+# ============================================================================
+# Links cels-clay-core + cels-ncurses. Headers under include/cels-clay-ncurses/.
+
+add_library(cels-clay-ncurses INTERFACE)
+target_sources(cels-clay-ncurses INTERFACE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/clay_ncurses_renderer.c
+)
+target_include_directories(cels-clay-ncurses INTERFACE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/cels-clay-ncurses
+)
+target_link_libraries(cels-clay-ncurses INTERFACE cels-clay-core cels-ncurses)
+
+# ============================================================================
+# cels-clay-widgets — UI widget layer
+# ============================================================================
+# clay_button.c is created in plan 03-03; the target is declared here so the
+# target name resolves for Nucleus link lines. Headers under include/cels-clay-widgets/.
+
+add_library(cels-clay-widgets INTERFACE)
+target_sources(cels-clay-widgets INTERFACE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/clay_button.c
+)
+target_include_directories(cels-clay-widgets INTERFACE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/cels-clay-widgets
+)
+target_link_libraries(cels-clay-widgets INTERFACE cels-clay-core)
+
+# ============================================================================
+# Back-compat aggregate alias (D-14)
+# ============================================================================
+# cels-clay pulls in all four per-target libs. Existing consumers that link
+# cels-clay continue to build unchanged during the deprecation window.
+
+add_library(cels-clay INTERFACE)
 target_link_libraries(cels-clay INTERFACE
-    cels
+    cels-clay-core
+    cels-clay-sdl3
+    cels-clay-ncurses
+    cels-clay-widgets
 )
-
-# ============================================================================
-# Optional ncurses renderer (when cels-ncurses is available)
-# ============================================================================
-# The ncurses renderer translates Clay render commands into terminal output
-# using cels-ncurses drawing primitives. Conditionally compiled only when
-# cels-ncurses exists as a CMake target (i.e., the consumer links both modules).
-# The INTERFACE link propagates ncurses include paths and link flags to consumers.
-
-if(TARGET cels-ncurses)
-    target_sources(cels-clay INTERFACE
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/clay_ncurses_renderer.c
-    )
-    target_link_libraries(cels-clay INTERFACE
-        cels-ncurses
-    )
-endif()
-
-# ============================================================================
-# Optional SDL3 renderer (when cels-sdl3 is available)
-# ============================================================================
-# The SDL3 renderer translates Clay render commands into graphical output
-# using SDL3 rendering API and SDL3_ttf for text. Conditionally compiled
-# only when cels-sdl3 exists as a CMake target (i.e., the consumer links
-# both modules). The INTERFACE link propagates SDL3 include paths and link
-# flags to consumers.
-
-if(TARGET cels-sdl3)
-    target_sources(cels-clay INTERFACE
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/clay_sdl3_renderer.c
-    )
-    target_link_libraries(cels-clay INTERFACE
-        cels-sdl3
-    )
-endif()
+add_library(cels::clay ALIAS cels-clay)
 
 # ============================================================================
 # Example applications (optional)
@@ -147,26 +154,28 @@ endif()
 option(CELS_CLAY_BUILD_EXAMPLES "Build cels-clay example applications" ON)
 
 if(CELS_CLAY_BUILD_EXAMPLES)
-    # NCurses example (requires cels-ncurses)
+    # NCurses example
     if(TARGET cels-ncurses)
         add_executable(main_ncurses
             ${CMAKE_CURRENT_SOURCE_DIR}/examples/minimal/main_ncurses.c
         )
         target_link_libraries(main_ncurses PRIVATE
-            cels-clay
+            cels-clay-core
+            cels-clay-ncurses
         )
         target_include_directories(main_ncurses PRIVATE
             ${CMAKE_CURRENT_SOURCE_DIR}/examples/minimal
         )
     endif()
 
-    # SDL3 example (requires cels-sdl3)
+    # SDL3 example
     if(TARGET cels-sdl3)
         add_executable(main_sdl3
             ${CMAKE_CURRENT_SOURCE_DIR}/examples/minimal/main_sdl3.c
         )
         target_link_libraries(main_sdl3 PRIVATE
-            cels-clay
+            cels-clay-core
+            cels-clay-sdl3
         )
         target_include_directories(main_sdl3 PRIVATE
             ${CMAKE_CURRENT_SOURCE_DIR}/examples/minimal

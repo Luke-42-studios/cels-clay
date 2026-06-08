@@ -39,7 +39,7 @@
  *       It is conditionally included when the cels-ncurses target exists.
  */
 
-#include "cels-clay/clay_ncurses_renderer.h"
+#include "cels-clay-ncurses/clay_ncurses_renderer.h"
 #include "cels-clay/clay_render.h"
 #include "clay.h"
 #include <cels/cels.h>

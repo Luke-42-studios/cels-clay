@@ -15,7 +15,7 @@
 #include <cels/cels.h>
 #include <cels_sdl3.h>
 #include <cels-clay/clay_engine.h>
-#include <cels-clay/clay_sdl3_renderer.h>
+#include <cels-clay-sdl3/clay_sdl3_renderer.h>
 #include <cels-clay/clay_primitives.h>
 #include <cels-clay/clay_layout.h>
 #include "ui.h"
