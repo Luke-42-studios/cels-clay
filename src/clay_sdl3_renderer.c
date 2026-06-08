@@ -78,7 +78,15 @@ static void scissor_reset(void) {
 }
 
 static void scissor_push(SDL_Rect new_rect) {
-    if (g_scissor_depth > 0 && g_scissor_depth <= MAX_SCISSOR_DEPTH) {
+    /* Overflow: keep the current clip untouched. Applying a clip without
+     * also tracking it on the stack would desynchronize push/pop -- the
+     * matching pop would restore a stale rect and silently corrupt every
+     * subsequent draw. Skip cleanly instead. */
+    if (g_scissor_depth >= MAX_SCISSOR_DEPTH) {
+        return;
+    }
+
+    if (g_scissor_depth > 0) {
         /* Intersect with current top of stack */
         SDL_Rect current = g_scissor_stack[g_scissor_depth - 1];
         int x1 = SDL_max(new_rect.x, current.x);
@@ -91,11 +99,9 @@ static void scissor_push(SDL_Rect new_rect) {
         new_rect.h = SDL_max(0, y2 - y1);
     }
 
-    if (g_scissor_depth < MAX_SCISSOR_DEPTH) {
-        g_scissor_stack[g_scissor_depth] = new_rect;
-        g_scissor_depth++;
-    }
-
+    /* Apply only what we also track, so push/pop stay symmetric. */
+    g_scissor_stack[g_scissor_depth] = new_rect;
+    g_scissor_depth++;
     SDL_SetRenderClipRect(g_renderer, &new_rect);
 }
 
