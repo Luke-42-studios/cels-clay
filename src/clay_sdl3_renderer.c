@@ -265,9 +265,17 @@ static void render_sdl3_text(Clay_RenderCommand* cmd) {
     TTF_SetTextColor(ttf_text,
                      clamp8(c.r), clamp8(c.g), clamp8(c.b), clamp8(c.a));
 
-    /* Draw at bounding box position */
+    /* Draw at bounding box position, snapped to the integer device-pixel grid.
+     * Clay derives boundingBox.{x,y} from cumulative fractional layout, so the
+     * draw origin is almost never on an exact pixel. The glyph-atlas blit at a
+     * fractional offset drops the top or bottom ink row (the row rounds off the
+     * grid) — visible as descenders OR ascender/cap tops sheared flat, and it
+     * varies per element with the fractional part (e.g. a lower card clips while
+     * an upper one does not). Flooring x/y pins the atlas to whole pixels so no
+     * edge row is lost, top or bottom. */
     TTF_DrawRendererText(ttf_text,
-                         cmd->boundingBox.x, cmd->boundingBox.y);
+                         SDL_floorf(cmd->boundingBox.x),
+                         SDL_floorf(cmd->boundingBox.y));
 
     TTF_DestroyText(ttf_text);
 }
