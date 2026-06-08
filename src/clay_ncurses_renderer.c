@@ -577,7 +577,17 @@ static Clay_Dimensions clay_ncurses_measure_text(
             return (Clay_Dimensions){ .width = 0, .height = 0 };
         }
     }
-    mbstowcs(wbuf, buf, needed + 1);
+    /* Re-check the second conversion: if the locale/multibyte state changes
+     * between the two calls (or an invalid sequence appears mid-string), this
+     * can return (size_t)-1, leaving wbuf partially/never initialized -- the
+     * wcwidth loop below would then read uninitialized memory. Bail to the
+     * byte-count fallback on failure. */
+    size_t converted = mbstowcs(wbuf, buf, needed + 1);
+    if (converted == (size_t)-1) {
+        if (wbuf != wbuf_stack) free(wbuf);
+        if (buf != buf_stack) free(buf);
+        return (Clay_Dimensions){ .width = (float)text.length / g_theme->cell_aspect_ratio, .height = 1 };
+    }
 
     /* Walk wide chars: accumulate column width via wcwidth, track newlines */
     float max_width = 0;
