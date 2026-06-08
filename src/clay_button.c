@@ -126,17 +126,21 @@ CEL_Composition(ClayButton) {
      * with a non-zero alpha: (cels_color_t){0,0,0,128} for semi-transparent.
      * In practice, transparent buttons are rare and this trade-off is acceptable
      * for the ergonomic gain at every ordinary call site.
-     */
-#define _AUTO_SEED(field) \
-    if (cel.field.r == 0.0f && cel.field.g == 0.0f && \
-        cel.field.b == 0.0f && cel.field.a == 0.0f) { \
-        cel.field = CELS_DEFAULT_COLOR; \
-    }
-    _AUTO_SEED(bg_normal)
-    _AUTO_SEED(bg_selected)
-    _AUTO_SEED(fg_normal)
-    _AUTO_SEED(fg_done)
-#undef _AUTO_SEED
+     *
+     * WR-09: seed into LOCALS, never write back into `cel.*`. Mutating `cel`
+     * assumes it is a mutable by-value copy of the props; if the CEL layer ever
+     * exposes `cel` as a const view or a pointer into stored component memory,
+     * those writes would fail to compile or corrupt shared ECS state. Resolving
+     * into locals keeps sentinel seeding purely in the render path. */
+#define _SEED(field) \
+    ((cel.field.r == 0.0f && cel.field.g == 0.0f && \
+      cel.field.b == 0.0f && cel.field.a == 0.0f) \
+        ? CELS_DEFAULT_COLOR : cel.field)
+    cels_color_t in_bg_normal   = _SEED(bg_normal);
+    cels_color_t in_bg_selected = _SEED(bg_selected);
+    cels_color_t in_fg_normal   = _SEED(fg_normal);
+    cels_color_t in_fg_done     = _SEED(fg_done);
+#undef _SEED
 
     /* 1. Attach ClayButtonState and subscribe to per-entity changes in one call.
      *    Defaults land once on first compose; thereafter the field values
@@ -151,15 +155,19 @@ CEL_Composition(ClayButton) {
      *    .on_click via cel_get(entity, ClayButtonProps) and dispatch
      *    through cel_action_invoke. Props legitimately update across
      *    recompose (e.g., new .label), so we WRITE every time. */
+    /* WR-09: store the SEEDED inputs (all-zero -> CELS_DEFAULT_COLOR sentinel),
+     * deliberately preserving the prior behavior where the stored props carried
+     * the sentinel. Downstream consumers reading ClayButtonProps see the same
+     * "unset -> theme" signal the render path resolves below. */
     cel_has(ClayButtonProps,
         .label       = cel.label,
         .on_click    = cel.on_click,
         .font_size   = cel.font_size,
         .padding     = cel.padding,
-        .bg_normal   = cel.bg_normal,
-        .bg_selected = cel.bg_selected,
-        .fg_normal   = cel.fg_normal,
-        .fg_done     = cel.fg_done
+        .bg_normal   = in_bg_normal,
+        .bg_selected = in_bg_selected,
+        .fg_normal   = in_fg_normal,
+        .fg_done     = in_fg_done
     );
 
     /* 3. Read active theme reactively.
@@ -181,22 +189,22 @@ CEL_Composition(ClayButton) {
      *
      *    Padding and font_size use the original 2-level fallback (no theme slot
      *    for these — they remain widget-default controlled). */
-    bg_normal = cels_resolve_color(cel.bg_normal,
+    bg_normal = cels_resolve_color(in_bg_normal,
                     cels_resolve_color(
                         theme ? theme->surface : CELS_DEFAULT_COLOR,
                         CLAY_BUTTON_DEFAULT_BG_NORMAL));
 
-    bg_selected = cels_resolve_color(cel.bg_selected,
+    bg_selected = cels_resolve_color(in_bg_selected,
                       cels_resolve_color(
                           theme ? theme->surface_alt : CELS_DEFAULT_COLOR,
                           CLAY_BUTTON_DEFAULT_BG_SELECTED));
 
-    fg_normal = cels_resolve_color(cel.fg_normal,
+    fg_normal = cels_resolve_color(in_fg_normal,
                     cels_resolve_color(
                         theme ? theme->text : CELS_DEFAULT_COLOR,
                         CLAY_BUTTON_DEFAULT_FG_NORMAL));
 
-    fg_done = cels_resolve_color(cel.fg_done,
+    fg_done = cels_resolve_color(in_fg_done,
                   cels_resolve_color(
                       theme ? theme->muted : CELS_DEFAULT_COLOR,
                       CLAY_BUTTON_DEFAULT_FG_DONE));
