@@ -149,7 +149,8 @@ static NCurses_CellRect clay_bbox_to_cells(Clay_BoundingBox bbox) {
 }
 
 static NCurses_CellRect clay_text_bbox_to_cells(Clay_BoundingBox bbox) {
-    /* No aspect ratio scaling -- text widths are already in cell columns */
+    /* x origin IS aspect-scaled to align with AR-scaled rectangles;
+     * width/height stay in cell columns (already terminal-accurate). */
     int cx = (int)roundf(bbox.x * g_theme->cell_aspect_ratio);
     int cy = (int)roundf(bbox.y);
     int cw = (int)roundf(bbox.width);
