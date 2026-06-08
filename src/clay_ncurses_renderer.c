@@ -628,6 +628,13 @@ static Clay_Dimensions clay_ncurses_measure_text(
 
 static int g_prev_raw_key = 0;
 
+/* Per-frame key-scan cap. MUST mirror the fixed size of NCurses_InputState.keys[]
+ * in cels_ncurses.h (currently keys[16]); key_count never exceeds it, so scanning
+ * up to this bound covers every key in the frame and last_raw_key below is the
+ * true last key (the gg-sequence detector depends on that). Kept as a named
+ * constant so the bound is no longer a bare magic number duplicated inline. */
+#define CLAY_NCURSES_MAX_KEYS_PER_FRAME 16
+
 /* ============================================================================
  * Module Definition
  * ============================================================================ */
@@ -681,9 +688,13 @@ void clay_ncurses_handle_scroll_input(const struct NCurses_InputState* input,
         return;
     }
 
-    /* Scan all keys pressed this frame */
+    /* Scan all keys pressed this frame. The bound mirrors the keys[] buffer
+     * size, so this scans every key in the frame -- last_raw_key is the true
+     * last key, which the gg-sequence detector relies on. */
     int last_raw_key = 0;
-    for (int ki = 0; ki < input->key_count && ki < 16; ki++) {
+    for (int ki = 0;
+         ki < input->key_count && ki < CLAY_NCURSES_MAX_KEYS_PER_FRAME;
+         ki++) {
         int key = input->keys[ki];
         last_raw_key = key;
 
