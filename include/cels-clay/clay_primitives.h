@@ -55,20 +55,51 @@
 
 #include <cels/cels.h>
 #include "clay.h"
-#include <nucleus/nucleus_types.h>  /* nucleus_color_t, nucleus_padding_t, nucleus_size_t */
+#include <cels-theme/cels_theme.h>  /* cels_color_t, CELS_DEFAULT_COLOR */
 #include <stdbool.h>
 #include <stdint.h>
 
 /* ============================================================================
+ * Wrapper types — nucleus_*_t convenience aliases.
+ * nucleus_color_t is a typedef alias for cels_color_t (ABI-identical to Clay_Color).
+ * nucleus_padding_t and nucleus_size_t are standalone structs defined here so
+ * clay_primitives.h does not depend on engines/Nucleus/include.
+ * ============================================================================ */
+
+/* Color: alias cels_color_t (owned by cels-theme, ABI-identical to Clay_Color).
+ * Guard prevents redefinition when nucleus_types.h is also included (Nucleus builds). */
+#ifndef NUCLEUS_COLOR_T_DEFINED
+#define NUCLEUS_COLOR_T_DEFINED
+typedef cels_color_t nucleus_color_t;
+#endif
+
+/* Padding: ABI-identical to Clay_Padding { uint16_t left, right, top, bottom; }. */
+#ifndef NUCLEUS_PADDING_T_DEFINED
+#define NUCLEUS_PADDING_T_DEFINED
+typedef struct { uint16_t left, right, top, bottom; } nucleus_padding_t;
+#endif
+
+/* Sizing: simplified sizing type (NOT ABI-identical to Clay_SizingAxis).
+ * kind: 0=FIT, 1=GROW, 2=FIXED, 3=PERCENT. Convert via to_clay_sizing(). */
+#ifndef NUCLEUS_SIZE_T_DEFINED
+#define NUCLEUS_SIZE_T_DEFINED
+typedef struct { uint8_t kind; float value; } nucleus_size_t;
+#define NUCLEUS_SIZE_FIT(v)     ((nucleus_size_t){.kind = 0, .value = (float)(v)})
+#define NUCLEUS_SIZE_GROW(v)    ((nucleus_size_t){.kind = 1, .value = (float)(v)})
+#define NUCLEUS_SIZE_FIXED(v)   ((nucleus_size_t){.kind = 2, .value = (float)(v)})
+#define NUCLEUS_SIZE_PERCENT(v) ((nucleus_size_t){.kind = 3, .value = (float)(v)})
+#endif
+
+/* ============================================================================
  * ABI-drift guards (file-scope exception: clay_primitives.h already includes
  * clay.h, so _Static_assert guards are permitted here — see PATTERNS.md).
- * Fail the build at compile time if Clay changes its struct layout before we
- * update nucleus_types.h. No size assert for nucleus_size_t (NOT ABI-identical).
+ * Fail the build at compile time if Clay changes its struct layout.
+ * No size assert for nucleus_size_t (NOT ABI-identical to Clay_SizingAxis).
  * ============================================================================ */
-_Static_assert(sizeof(nucleus_color_t) == sizeof(Clay_Color),
-    "nucleus_color_t layout drifted from Clay_Color -- update nucleus_types.h");
+_Static_assert(sizeof(cels_color_t) == sizeof(Clay_Color),
+    "cels_color_t layout drifted from Clay_Color -- update cels_theme.h");
 _Static_assert(sizeof(nucleus_padding_t) == sizeof(Clay_Padding),
-    "nucleus_padding_t layout drifted from Clay_Padding -- update nucleus_types.h");
+    "nucleus_padding_t layout drifted from Clay_Padding -- update clay_primitives.h");
 
 /* ============================================================================
  * Type-conversion helpers — nucleus_*_t → Clay_* at the boundary.
