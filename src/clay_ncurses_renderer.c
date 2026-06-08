@@ -92,6 +92,18 @@ static inline uint32_t _text_attr_to_ncurses(CEL_TextAttr a) {
     return flags;
 }
 
+/* Clamp a float color channel to the valid [0,255] uint8 range.
+ * The color resolution chain is supposed to replace the CELS_DEFAULT_COLOR
+ * sentinel {-1,-1,-1,-1} before commands are emitted, but if any path slips
+ * an unresolved sentinel through, a bare (uint8_t)(-1.0f) cast is
+ * implementation-defined (typically 255) and paints a wrong color. Clamping
+ * at the renderer boundary fails predictably (to black) instead. */
+static inline uint8_t clamp8(float v) {
+    if (v < 0.0f)   return 0;
+    if (v > 255.0f) return 255;
+    return (uint8_t)v;
+}
+
 /* ============================================================================
  * Static State
  * ============================================================================ */
@@ -168,7 +180,7 @@ static void render_rectangle(NCurses_DrawContext* ctx, NCurses_CellRect rect,
 
     NCurses_Style style = {
         .fg = NCURSES_COLOR_DEFAULT,
-        .bg = ncurses_color_rgb((uint8_t)c.r, (uint8_t)c.g, (uint8_t)c.b),
+        .bg = ncurses_color_rgb(clamp8(c.r), clamp8(c.g), clamp8(c.b)),
         .attrs = NCURSES_ATTR_NORMAL,
     };
 
@@ -233,8 +245,8 @@ static void render_text(NCurses_DrawContext* ctx, NCurses_CellRect rect,
 
     Clay_Color c = data->textColor;
     NCurses_Color bg = (parent_bg.a > 0)
-        ? ncurses_color_rgb((uint8_t)parent_bg.r, (uint8_t)parent_bg.g,
-                            (uint8_t)parent_bg.b)
+        ? ncurses_color_rgb(clamp8(parent_bg.r), clamp8(parent_bg.g),
+                            clamp8(parent_bg.b))
         : NCURSES_COLOR_DEFAULT;
 
     /* Decode text attributes from userData (packed by w_pack_text_attr) */
@@ -245,7 +257,7 @@ static void render_text(NCurses_DrawContext* ctx, NCurses_CellRect rect,
     }
 
     NCurses_Style style = {
-        .fg = ncurses_color_rgb((uint8_t)c.r, (uint8_t)c.g, (uint8_t)c.b),
+        .fg = ncurses_color_rgb(clamp8(c.r), clamp8(c.g), clamp8(c.b)),
         .bg = bg,
         .attrs = attrs,
     };
@@ -283,13 +295,13 @@ static void render_border(NCurses_DrawContext* ctx, NCurses_CellRect rect,
     /* Use Clay border color when provided, else terminal default */
     Clay_Color c = data->color;
     NCurses_Color fg = (c.r || c.g || c.b || c.a)
-        ? ncurses_color_rgb((uint8_t)c.r, (uint8_t)c.g, (uint8_t)c.b)
+        ? ncurses_color_rgb(clamp8(c.r), clamp8(c.g), clamp8(c.b))
         : NCURSES_COLOR_DEFAULT;
 
     /* Use parent rectangle's bg so border chars blend with the fill */
     NCurses_Color bg = (parent_bg.a > 0)
-        ? ncurses_color_rgb((uint8_t)parent_bg.r, (uint8_t)parent_bg.g,
-                            (uint8_t)parent_bg.b)
+        ? ncurses_color_rgb(clamp8(parent_bg.r), clamp8(parent_bg.g),
+                            clamp8(parent_bg.b))
         : NCURSES_COLOR_DEFAULT;
 
     NCurses_Style style = {
@@ -345,7 +357,7 @@ static void render_border_decor(NCurses_DrawContext* ctx, NCurses_CellRect rect,
     if (inner.w > 0 && inner.h > 0 && ibg.a >= 2.0f) {
         NCurses_Style fill_style = {
             .fg = NCURSES_COLOR_DEFAULT,
-            .bg = ncurses_color_rgb((uint8_t)ibg.r, (uint8_t)ibg.g, (uint8_t)ibg.b),
+            .bg = ncurses_color_rgb(clamp8(ibg.r), clamp8(ibg.g), clamp8(ibg.b)),
             .attrs = NCURSES_ATTR_NORMAL,
         };
         ncurses_draw_fill_rect(ctx, inner, ' ', fill_style);
@@ -354,11 +366,11 @@ static void render_border_decor(NCurses_DrawContext* ctx, NCurses_CellRect rect,
     /* Border style: border fg on parent/terminal bg (no panel bg bleed) */
     Clay_Color c = decor->border_color;
     NCurses_Color border_bg = (parent_bg.a > 0)
-        ? ncurses_color_rgb((uint8_t)parent_bg.r, (uint8_t)parent_bg.g,
-                            (uint8_t)parent_bg.b)
+        ? ncurses_color_rgb(clamp8(parent_bg.r), clamp8(parent_bg.g),
+                            clamp8(parent_bg.b))
         : NCURSES_COLOR_DEFAULT;
     NCurses_Style style = {
-        .fg = ncurses_color_rgb((uint8_t)c.r, (uint8_t)c.g, (uint8_t)c.b),
+        .fg = ncurses_color_rgb(clamp8(c.r), clamp8(c.g), clamp8(c.b)),
         .bg = border_bg,
         .attrs = NCURSES_ATTR_NORMAL,
     };
@@ -377,7 +389,7 @@ static void render_border_decor(NCurses_DrawContext* ctx, NCurses_CellRect rect,
         }
 
         NCurses_Style title_style = {
-            .fg = ncurses_color_rgb((uint8_t)tc.r, (uint8_t)tc.g, (uint8_t)tc.b),
+            .fg = ncurses_color_rgb(clamp8(tc.r), clamp8(tc.g), clamp8(tc.b)),
             .bg = border_bg,
             .attrs = attrs,
         };
@@ -402,7 +414,7 @@ static void render_border_decor(NCurses_DrawContext* ctx, NCurses_CellRect rect,
     if (decor->right_text && decor->right_text[0] != '\0') {
         Clay_Color rc = decor->right_color;
         NCurses_Style right_style = {
-            .fg = ncurses_color_rgb((uint8_t)rc.r, (uint8_t)rc.g, (uint8_t)rc.b),
+            .fg = ncurses_color_rgb(clamp8(rc.r), clamp8(rc.g), clamp8(rc.b)),
             .bg = border_bg,
             .attrs = NCURSES_ATTR_NORMAL,
         };

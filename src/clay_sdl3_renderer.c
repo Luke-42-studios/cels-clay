@@ -57,6 +57,17 @@ static SDL_Renderer* g_renderer = NULL;
 static TTF_Font* g_font = NULL;
 static TTF_TextEngine* g_text_engine = NULL;
 
+/* Clamp a float color channel to the valid [0,255] uint8 range.
+ * The resolution chain is supposed to replace the CELS_DEFAULT_COLOR sentinel
+ * {-1,-1,-1,-1} before commands are emitted, but if an unresolved sentinel
+ * slips through, a bare (uint8_t)(-1.0f) cast is implementation-defined
+ * (typically 255) and paints a wrong color. Clamping fails predictably. */
+static inline uint8_t clamp8(float v) {
+    if (v < 0.0f)   return 0;
+    if (v > 255.0f) return 255;
+    return (uint8_t)v;
+}
+
 /* ============================================================================
  * Scissor Stack
  * ============================================================================
@@ -245,7 +256,7 @@ static void render_sdl3_text(Clay_RenderCommand* cmd) {
     /* Set text color */
     Clay_Color c = td->textColor;
     TTF_SetTextColor(ttf_text,
-                     (uint8_t)c.r, (uint8_t)c.g, (uint8_t)c.b, (uint8_t)c.a);
+                     clamp8(c.r), clamp8(c.g), clamp8(c.b), clamp8(c.a));
 
     /* Draw at bounding box position */
     TTF_DrawRendererText(ttf_text,
@@ -272,7 +283,7 @@ static void render_sdl3_border(Clay_RenderCommand* cmd) {
     Clay_Color c = bd->color;
 
     SDL_SetRenderDrawColor(g_renderer,
-        (uint8_t)c.r, (uint8_t)c.g, (uint8_t)c.b, (uint8_t)c.a);
+        clamp8(c.r), clamp8(c.g), clamp8(c.b), clamp8(c.a));
 
     float x = bb.x, y = bb.y, w = bb.width, h = bb.height;
 
@@ -334,8 +345,8 @@ static void clay_sdl3_render(cels_iter_t* it) {
                     Clay_Color c = cmd->renderData.rectangle.backgroundColor;
                     SDL_SetRenderDrawBlendMode(g_renderer, SDL_BLENDMODE_BLEND);
                     SDL_SetRenderDrawColor(g_renderer,
-                        (uint8_t)c.r, (uint8_t)c.g,
-                        (uint8_t)c.b, (uint8_t)c.a);
+                        clamp8(c.r), clamp8(c.g),
+                        clamp8(c.b), clamp8(c.a));
                     /* Clamp rect to reasonable size for SDL */
                     if (rect.w > 10000) rect.w = 10000;
                     if (rect.h > 10000) rect.h = 10000;
