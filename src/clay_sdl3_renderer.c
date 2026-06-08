@@ -141,22 +141,29 @@ static bool ensure_renderer_initialized(void) {
     /* Enable alpha blending by default */
     SDL_SetRenderDrawBlendMode(g_renderer, SDL_BLENDMODE_BLEND);
 
-    /* Create text engine for TTF rendering */
-    g_text_engine = TTF_CreateRendererTextEngine(g_renderer);
+    /* Create text engine for TTF rendering.
+     * Guard: do not recreate if a prior call already built one -- this
+     * function can run more than once if g_renderer is transiently NULL,
+     * and recreating would leak the previous engine. */
     if (!g_text_engine) {
-        SDL_Log("Clay_SDL3: TTF_CreateRendererTextEngine failed: %s",
-                SDL_GetError());
+        g_text_engine = TTF_CreateRendererTextEngine(g_renderer);
+        if (!g_text_engine) {
+            SDL_Log("Clay_SDL3: TTF_CreateRendererTextEngine failed: %s",
+                    SDL_GetError());
+        }
     }
 
-    /* Load TTF font */
-    if (g_sdl3_config.font_path) {
+    /* Load TTF font. This is the single owner of font loading.
+     * Guard: do not reopen if the font is already loaded -- otherwise the
+     * prior TTF_Font* is overwritten and leaked on the happy path. */
+    if (!g_font && g_sdl3_config.font_path) {
         int size = g_sdl3_config.font_size > 0 ? g_sdl3_config.font_size : 16;
         g_font = TTF_OpenFont(g_sdl3_config.font_path, (float)size);
         if (!g_font) {
             SDL_Log("Clay_SDL3: TTF_OpenFont('%s') failed: %s",
                     g_sdl3_config.font_path, SDL_GetError());
         }
-    } else {
+    } else if (!g_font && !g_sdl3_config.font_path) {
         SDL_Log("Clay_SDL3: No font_path configured. "
                 "Text rendering will be disabled.");
     }
@@ -371,19 +378,12 @@ static void clay_sdl3_render(cels_iter_t* it) {
 
 CEL_Module(Clay_SDL3, init) {
     /* Register text measurement callback (pixel-based via TTF).
-     * Font loading is deferred to ensure_renderer_initialized() since
-     * the SDL_Window may not exist yet at module init time. However,
-     * we attempt font loading here for the common case where SDL3
-     * is already initialized. */
-    if (g_sdl3_config.font_path) {
-        int size = g_sdl3_config.font_size > 0
-            ? g_sdl3_config.font_size : 16;
-        g_font = TTF_OpenFont(g_sdl3_config.font_path, (float)size);
-        if (!g_font) {
-            /* Font load deferred to ensure_renderer_initialized */
-            SDL_Log("Clay_SDL3: Font load deferred (TTF may not be ready)");
-        }
-    }
+     * Font loading is deferred entirely to ensure_renderer_initialized()
+     * (the single owner) since the SDL_Window may not exist yet at module
+     * init time. Opening the font here as well would double-open it (the
+     * lazy path runs on the first render frame), leaking the first handle.
+     * If text measurement is needed before the first render frame,
+     * clay_sdl3_measure_text() triggers the lazy init on demand. */
 
     Clay_SetMeasureTextFunction(clay_sdl3_measure_text, NULL);
 
