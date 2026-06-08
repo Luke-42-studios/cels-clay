@@ -23,14 +23,14 @@
  * Color Palette -- high contrast, visible on dark terminals and windows
  * ============================================================================ */
 
-#define UI_BG_DARK     (nucleus_color_t){30, 30, 40, 255}
-#define UI_BG_SIDEBAR  (nucleus_color_t){40, 45, 60, 255}
-#define UI_BG_CONTENT  (nucleus_color_t){35, 38, 50, 255}
-#define UI_BG_CARD     (nucleus_color_t){50, 55, 75, 255}
-#define UI_FG_TITLE    (nucleus_color_t){220, 220, 240, 255}
-#define UI_FG_TEXT     (nucleus_color_t){180, 185, 200, 255}
-#define UI_FG_DIM      (nucleus_color_t){120, 125, 140, 255}
-#define UI_ACCENT      (nucleus_color_t){100, 140, 220, 255}
+#define UI_BG_DARK     (cels_color_t){30, 30, 40, 255}
+#define UI_BG_SIDEBAR  (cels_color_t){40, 45, 60, 255}
+#define UI_BG_CONTENT  (cels_color_t){35, 38, 50, 255}
+#define UI_BG_CARD     (cels_color_t){50, 55, 75, 255}
+#define UI_FG_TITLE    (cels_color_t){220, 220, 240, 255}
+#define UI_FG_TEXT     (cels_color_t){180, 185, 200, 255}
+#define UI_FG_DIM      (cels_color_t){120, 125, 140, 255}
+#define UI_ACCENT      (cels_color_t){100, 140, 220, 255}
 
 /* ============================================================================
  * build_ui() -- constructs the complete UI entity tree
