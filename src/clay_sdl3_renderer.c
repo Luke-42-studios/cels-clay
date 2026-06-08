@@ -226,7 +226,14 @@ static Clay_Dimensions clay_sdl3_measure_text(
     int w = 0, h = 0;
     TTF_GetStringSize(g_font, text.chars, (size_t)text.length, &w, &h);
 
-    return (Clay_Dimensions){ .width = (float)w, .height = (float)h };
+    /* TTF_GetStringSize returns exactly ascent + |descent|, which leaves
+     * descenders flush against the box bottom with zero spare margin. Clay
+     * derives a fractional box top from cumulative layout, so the descender's
+     * bottom ink row rounds off the device pixel grid and gets sheared. Reserve
+     * one extra bottom row: this only ever grows the box (never shrinks it), and
+     * the render helper still draws at the top-left box position, so glyphs stay
+     * top-anchored — the sole effect is one transparent row at the very bottom. */
+    return (Clay_Dimensions){ .width = (float)w, .height = (float)(h + 1) };
 }
 
 /* ============================================================================
