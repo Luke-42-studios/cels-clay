@@ -26,51 +26,61 @@ endif()
 # ============================================================================
 # Fetch Clay (single-header layout library)
 # ============================================================================
-# Clay's CMakeLists.txt defaults CLAY_INCLUDE_ALL_EXAMPLES=ON which pulls
-# in raylib/SDL deps. We disable examples before MakeAvailable so only the
-# Clay source tree is fetched — we create our own INTERFACE target below.
+# Clay is header-only. Fast path: sibling ../clay/clay.h auto-detect (dev
+# layout). Fallback: CPM DOWNLOAD_ONLY so Clay's own CMake/examples (raylib,
+# SDL) never execute — we create our own INTERFACE target below.
+# Local-dev override (replaces CLAY_SOURCE_DIR cache var):
+#   cmake -S . -B build -DCLAY_SOURCE_DIR=/path/to/clay
+#   cmake -S . -B build -DCPM_cels_SOURCE=../cels -DCPM_cels-theme_SOURCE=../cels-theme
+# Shared dep cache:
+#   export CPM_SOURCE_CACHE=$HOME/.cache/CPM
 
-include(FetchContent)
+# Local development override: use a Clay checkout instead of CPM fetch
+set(CLAY_SOURCE_DIR "" CACHE PATH "Path to local Clay source (overrides CPM fetch)")
 
-# Local development override: use a Clay checkout instead of fetching
-set(CLAY_SOURCE_DIR "" CACHE PATH "Path to local Clay source (overrides FetchContent)")
-
-# Auto-detect sibling clay directory
+# Auto-detect sibling clay directory (fast path — no network fetch)
 if(NOT CLAY_SOURCE_DIR AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/../clay/clay.h)
     set(CLAY_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../clay" CACHE PATH "" FORCE)
 endif()
 
 if(CLAY_SOURCE_DIR)
-    # Use local clone for development (e.g., ~/workspaces/libs/clay)
+    # Fast path: use local clone for development (e.g., ~/workspaces/libs/clay)
     set(clay_SOURCE_DIR "${CLAY_SOURCE_DIR}")
 else()
-    # Fetch from GitHub at pinned release tag
-    FetchContent_Declare(
-        clay
-        GIT_REPOSITORY https://github.com/nicbarker/clay.git
-        GIT_TAG        v0.14
+    # Fallback: fetch from GitHub at pinned release tag (header-only, DOWNLOAD_ONLY)
+    # CPM sets clay_SOURCE_DIR after fetch; Clay's CMakeLists.txt is never run.
+    CPMAddPackage(
+        NAME clay
+        GITHUB_REPOSITORY nicbarker/clay
+        GIT_TAG v0.14
+        OPTIONS "CLAY_INCLUDE_ALL_EXAMPLES OFF"
+        DOWNLOAD_ONLY YES
     )
-    # Disable Clay examples to avoid pulling in raylib/SDL/etc.
-    set(CLAY_INCLUDE_ALL_EXAMPLES OFF CACHE BOOL "" FORCE)
-    FetchContent_MakeAvailable(clay)
+    # clay_SOURCE_DIR is populated by CPM after the DOWNLOAD_ONLY fetch above
 endif()
 
 # ============================================================================
 # Sibling dependencies (standalone build support)
 # ============================================================================
-# When built standalone (e.g., opened in CLion), resolve sibling libraries
-# from the parent directory. When included via add_subdirectory from a parent
-# project, these targets already exist and the guards skip.
+# When built standalone, CPM fetches pinned tags. When included via
+# add_subdirectory or CPM from a parent project, these targets already exist
+# and the guards skip (CPMAddPackage is idempotent by NAME).
+# Local-dev sibling override: -DCPM_cels_SOURCE=../cels -DCPM_cels-theme_SOURCE=../cels-theme
 
 if(NOT TARGET cels)
-    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../cels ${CMAKE_CURRENT_BINARY_DIR}/_deps/cels EXCLUDE_FROM_ALL)
+    CPMAddPackage(
+        NAME cels
+        GITHUB_REPOSITORY Luke-42-studios/cels
+        GIT_TAG v0.6.1
+    )
 endif()
 
 if(NOT TARGET cels-theme)
-    if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/../cels-theme/CMakeLists.txt)
-        add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../cels-theme
-                         ${CMAKE_CURRENT_BINARY_DIR}/_deps/cels-theme EXCLUDE_FROM_ALL)
-    endif()
+    CPMAddPackage(
+        NAME cels-theme
+        GITHUB_REPOSITORY Luke-42-studios/cels-theme
+        GIT_TAG v0.1.0
+    )
 endif()
 
 # ============================================================================
