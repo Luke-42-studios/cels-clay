@@ -18,6 +18,11 @@
 cmake_minimum_required(VERSION 3.21)
 project(cels-clay VERSION 0.7.0 LANGUAGES C)
 
+# Vendor CPM — shared dependency cache: export CPM_SOURCE_CACHE=$HOME/.cache/CPM
+if(NOT COMMAND CPMAddPackage)
+    include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/CPM.cmake)
+endif()
+
 # ============================================================================
 # Fetch Clay (single-header layout library)
 # ============================================================================
