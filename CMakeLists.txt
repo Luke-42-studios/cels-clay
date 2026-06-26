@@ -71,7 +71,7 @@ if(NOT TARGET cels)
     CPMAddPackage(
         NAME cels
         GITHUB_REPOSITORY Luke-42-studios/cels
-        GIT_TAG v0.6.1
+        GIT_TAG v0.7
     )
 endif()
 
@@ -79,7 +79,7 @@ if(NOT TARGET cels-theme)
     CPMAddPackage(
         NAME cels-theme
         GITHUB_REPOSITORY Luke-42-studios/cels-theme
-        GIT_TAG v0.1.0
+        GIT_TAG master
     )
 endif()
 
