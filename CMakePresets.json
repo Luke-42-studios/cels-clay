@@ -1,0 +1,77 @@
+{
+    "version": 6,
+    "cmakeMinimumRequired": {
+        "major": 3,
+        "minor": 24,
+        "patch": 0
+    },
+    "configurePresets": [
+        {
+            "name": "base",
+            "hidden": true,
+            "generator": "Unix Makefiles"
+        },
+        {
+            "name": "linux-debug",
+            "displayName": "Linux Debug",
+            "inherits": "base",
+            "binaryDir": "${sourceDir}/out/linux-debug",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_RUNTIME_OUTPUT_DIRECTORY": "${sourceDir}/bin/linux-debug"
+            }
+        },
+        {
+            "name": "linux-release",
+            "displayName": "Linux Release",
+            "inherits": "base",
+            "binaryDir": "${sourceDir}/out/linux-release",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "CMAKE_RUNTIME_OUTPUT_DIRECTORY": "${sourceDir}/bin/linux-release"
+            }
+        },
+        {
+            "name": "linux-debug-local",
+            "displayName": "Linux Debug (local siblings)",
+            "inherits": "linux-debug",
+            "binaryDir": "${sourceDir}/out/linux-debug-local",
+            "cacheVariables": {
+                "CMAKE_RUNTIME_OUTPUT_DIRECTORY": "${sourceDir}/bin/linux-debug-local",
+                "CPM_cels_SOURCE": "${sourceDir}/../cels",
+                "CPM_cels-theme_SOURCE": "${sourceDir}/../cels-theme",
+                "CPM_clay_SOURCE": "${sourceDir}/../clay"
+            }
+        },
+        {
+            "name": "linux-release-local",
+            "displayName": "Linux Release (local siblings)",
+            "inherits": "linux-release",
+            "binaryDir": "${sourceDir}/out/linux-release-local",
+            "cacheVariables": {
+                "CMAKE_RUNTIME_OUTPUT_DIRECTORY": "${sourceDir}/bin/linux-release-local",
+                "CPM_cels_SOURCE": "${sourceDir}/../cels",
+                "CPM_cels-theme_SOURCE": "${sourceDir}/../cels-theme",
+                "CPM_clay_SOURCE": "${sourceDir}/../clay"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "linux-debug",
+            "configurePreset": "linux-debug"
+        },
+        {
+            "name": "linux-release",
+            "configurePreset": "linux-release"
+        },
+        {
+            "name": "linux-debug-local",
+            "configurePreset": "linux-debug-local"
+        },
+        {
+            "name": "linux-release-local",
+            "configurePreset": "linux-release-local"
+        }
+    ]
+}
